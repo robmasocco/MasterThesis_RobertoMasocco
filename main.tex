@@ -1,0 +1,73 @@
+% Master Thesis
+% Roberto Masocco <robmasocco@gmail.com>
+% July 26, 2021
+\documentclass[oneside, a4paper, 12pt, italian]{TorVergata_MT}
+
+% We put all necessary packages and newcommand etc. in Preamble.sty
+% Moreover, based on your materials add more packages and newcommands etc. in Preamble.sty
+\usepackage{Preamble}
+
+% Margin settings
+\geometry{
+	paper=a4paper, 
+	inner=2.5cm,  % Inner margin
+	outer=2.5cm,  % Outer margin
+	top=2.5cm,    % Top margin
+	bottom=2.5cm, % Bottom margin
+}
+
+% Thesis information
+% All the information below is used on the title page and wherever else is necessary
+\thesistitle{Framework di controllo open-source per robot intelligenti} % Thesis title, print it elsewhere with with \ttitle
+\Candidate{Roberto Masocco}                                             % Candidate name, print it elsewhere with \candidatename
+\FirstSupervisor{Prof. Daniele Carnevale}                               % First supervisor's name, print it elsewhere with \fstsupname
+\SecondSupervisor{Ing. Fabrizio Romanelli}                              % Second supervisor's name, print it elsewhere with \sndsupname
+\AcademicYear{2020/2021}                                                % Academic year, print it elsewhere with \AY
+\Specialist{Ingegneria dell'Automazione}                                % Specialist, print it elsewhere with \Sp
+\Department{Ingegneria Civile e Ingegneria Informatica}                 % Department, print it elsewhere with \Dep
+
+\begin{document}
+% Cover, dedication, acknowledgements, summary
+% Table of contents, abbreviations list
+\frontmatter
+\pagestyle{plain}
+\input{Frontmatter/Cover/Cover}
+\input{Frontmatter/Dedication/Dedication}
+\input{Frontmatter/Acknowledgments/Acknowledgments}
+\input{Frontmatter/Summary/Summary}
+\begin{center}
+    \tableofcontents
+    \newpage
+\end{center}
+\input{Frontmatter/Abbreviations/Abbreviations}
+
+% Chapters
+\mainmatter
+\setupname
+\input{Mainmatter/Chapters/Chapter1}
+\input{Mainmatter/Chapters/Chapter2}
+\input{Mainmatter/Chapters/Chapter3}
+\input{Mainmatter/Chapters/Chapter4}
+\input{Mainmatter/Chapters/Chapter5}
+
+% Bibliography, figures list, tables list, appendices
+\backmatter
+\newpage
+\pagestyle{plain}
+\setcounter{page}{1}\renewcommand*{\thepage}{R\arabic{page}}
+\renewcommand{\bibname}{Bibliografia}
+\addcontentsline{toc}{chapter}{Bibliografia}
+\printbibliography
+\newpage
+\begin{center}
+    \listoffigures
+    \newpage
+    \listoftables
+    \newpage
+\end{center}
+
+\newpage
+\setcounter{page}{1}
+\renewcommand*{\thepage}{A\arabic{page}}
+\input{Backmatter/Appendices/AppendixA}
+\end{document}

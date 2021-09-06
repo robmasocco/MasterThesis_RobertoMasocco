@@ -1,0 +1,48 @@
+% Chapter 2
+% Roberto Masocco <robmasocco@gmail.com>
+% August 28, 2021
+
+\chapter[Nuovi problemi e nuove soluzioni]{Nuovi problemi e nuove soluzioni}
+\label{Chapter2}
+\fontsize{14}{14}\selectfont
+
+\phantomsection
+\section*{Premessa}
+\sectionmark{Premessa}
+\addcontentsline{toc}{section}{Premessa}
+\indent Lo sviluppo di un sistema robotico autonomo è un processo che attraversa varie fasi. Ciascuna di esse è solitamente caratterizzata dalla definizione e soluzione di problematiche inerenti diversi aspetti dell'apparato, che possono andare dalle operazioni che questo sarà chiamato a svolgere, alla sua costruzione e programmazione, fino al modo in cui i dati che esso raccoglie e che condizionano il suo funzionamento debbano essere presentati agli eventuali operatori.\\
+Volendo generalizzare dallo specifico caso applicativo, la maggior parte delle problematiche si possono ripartire tra poche tipologie di alto livello. Nonostante possa risultare controintuitivo dalla suddivisione che ci si appresta a delineare, queste non sempre si rivelano affrontabili in sequenza, né tanto meno completamente indipendenti. È anche per risolvere situazioni simili che negli ultimi tempi sono state ideate svariate tecniche di project management, volte anche a minimizzare il rischio che un errore commesso in una fase precedente possa pregiudicare quelle future, compromettendo il lavoro svolto ed allungando i tempi di sviluppo.\\
+In virtù di quanto osservato nel capitolo precedente, è chiaro che con l'aumentare della complessità dei sistemi automatici odierni e dei compiti che essi devono svolgere, queste tematiche siano quanto mai attuali. In particolare, nuovi strumenti messi a disposizione di sviluppatori e progettisti dovranno riflettere queste specificità, semplificare la gestione di situazioni tipiche dove possibile, ed evidenziare eventuali criticità per aiutare nella soluzione dei problemi.\\
+Nonostante la generalizzazione che si sta facendo possa sembrare eccessiva, nella realtà pratica si riscontra facilmente che a dispetto della varietà di casi di specie e applicazioni, le complicazioni da affrontare sono quasi sempre se non le stesse, molto simili, e lo stesso si può rilevare circa le strategie da adottare. L'obiettivo di questo capitolo è presentare brevemente le problematiche che solitamente si devono affrontare quando si progetta un sistema robotico, evidenziandone le peculiarità seppur senza concentrarsi su un particolare ambito applicativo, e passare poi ad esaminare alcune recenti soluzioni hardware e software che consentono di ottimizzare il lavoro di progettazione, sviluppo e testing in loro funzione.\\
+La discussione parte ora da un livello abbastanza alto di astrazione ma diventerà via via sempre più specifica, costituendo di fatto la linea guida seguita durante il progetto che costituisce il caso di studio di questo lavoro e dunque un filo che lega tutti i capitoli successivi.
+
+\phantomsection
+\section*{Fasi e criticità progettuali}
+\sectionmark{Fasi e criticità progettuali}
+\addcontentsline{toc}{section}{Fasi e criticità progettuali}
+\phantomsection
+\subsection*{I task}
+\addcontentsline{toc}{subsection}{I task}
+\indent Le prime decisioni da prendere all'inizio del progetto di un sistema automatico o robotico riguardano naturalmente le specifiche delle operazioni che questo dovrà svolgere. Esse vanno completamente delineate fin da subito nei minimi particolari, in quanto è da loro che dipenderanno tutte le scelte successive, da quelle inerenti la costruzione e la scelta dell'hardware fino alla sua programmazione. Durante questa decomposizione dei requisiti operativi in \emph{task}, intesi come singole unità di lavoro da eseguire, compariranno diversi tipi di questi ultimi. Senza per ora scendere nei particolari di uno specifico caso, tipologie comuni sono:
+\begin{itemize}
+    \item task \textbf{continuativi}, ossia iniziati all'accensione del sistema e mai interrotti;
+    \item task \textbf{periodici}, da eseguire a intervalli regolari;
+    \item task \textbf{asincroni}, svolti solo quando un particolare evento si verifica.
+\end{itemize}
+È facile rendersi conto di come gran parte delle funzionalità presenti nei sistemi robotici odierni possa essere decomposta in task appartenenti a ciascuna di queste categorie. Ne fanno evidentemente parte operazioni che vanno dal controllo degli attuatori, alla raccolta di dati e misure necessari agli algoritmi di controllo, fino alla comunicazione con operatori ed utenti. Le specificità di questi task avranno risvolti sia sull'hardware che dovrà realizzarli che sul software che li codificherà, i quali dovranno essere organizzati opportunamente in loro funzione, anche in modo da facilitarne lo sviluppo e la manutenzione.\newpage
+
+\phantomsection
+\subsection*{L'hardware}
+\addcontentsline{toc}{subsection}{L'hardware}
+
+\phantomsection
+\subsection*{Il software}
+\addcontentsline{toc}{subsection}{Il software}
+
+\phantomsection
+\subsection*{I dati e le misure}
+\addcontentsline{toc}{subsection}{I dati e le misure}
+
+\phantomsection
+\subsection*{Debugging, testing e deployment}
+\addcontentsline{toc}{subsection}{Debugging, testing e deployment}
