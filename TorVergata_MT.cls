@@ -69,11 +69,9 @@
 \usepackage{fourier-orns}
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[L]{\vspace{-15pt}\fontsize{9}{10}\selectfont\uppercase{\leftmark}}
-\fancyhead[R]{\vspace{-15pt}\fontsize{9}{10}\selectfont\uppercase{\rightmark}}
-\fancyfoot[C]{\thepage}
-\renewcommand{\headrulewidth}{1pt}
-\fancyheadoffset{0cm}
+\fancyhead[R]{\rightmark}
+\fancyhead[L]{\leftmark}
+\fancyfoot[R]{\thepage}
 \renewcommand{\sectionmark}[1]{\markright{#1}}
 
 % Pagestyle for frontmatter, mainmatter and backmatter
