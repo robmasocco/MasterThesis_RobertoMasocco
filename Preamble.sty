@@ -165,9 +165,9 @@
 
 % The space between frontmatter and mainmatter in table of content
 \let\oldmainmatter\mainmatter
- \renewcommand{\mainmatter}{%
-  \addtocontents{toc}{\protect\addvspace{0.5pt}}%
-  \oldmainmatter%
+ \renewcommand{\mainmatter}{
+  \addtocontents{toc}{\protect\addvspace{1pt}}
+  \oldmainmatter
  }
 
 % The following is the space between paragraphs and indentation size
