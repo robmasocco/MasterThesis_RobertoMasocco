@@ -4,7 +4,7 @@
 
 \chapter[Nuovi problemi e nuove soluzioni]{Nuovi problemi e nuove soluzioni}
 \label{Chapter2}
-\fontsize{14}{14}\selectfont
+\fontsize{12}{12}\selectfont
 
 \phantomsection
 \section*{Premessa}
@@ -34,6 +34,16 @@ La discussione parte ora da un livello abbastanza alto di astrazione ma diventer
 \phantomsection
 \subsection*{L'hardware}
 \addcontentsline{toc}{subsection}{L'hardware}
+\indent Le decisioni da prendere successivamente riguardano l'hardware da utilizzare per realizzare i primi prototipi dell'apparato. Probabilmente non si tratterà di quello che comporrà il prodotto finito, per via di eventuali errori di valutazione, imprevisti o altre problematiche sorte successivamente. Ciò nonostante esso deve essere selezionato con cura in base ai requisiti operativi, strutturali e costruttivi definiti fin qui. Le decisioni prese durante il passo precedente rivestono in questa fase un'importanza cruciale: stabilendo infatti quale sia la complessità computazionale delle operazioni che il sistema dovrà svolgere, sarà richiesto un hardware di alto livello più o meno potente, equipaggiato eventualmente con coprocessori discreti\footnote{Con il termine \emph{discreto} si intende hardware aggiuntivo montato su calcolatore, non in grado di operare da solo ma fatto per essere pilotato da quest'ultimo, offrendogli supporto per operazioni supplementari; classici esempi sono i coprocessori matematici, le GPU e le schede audio.} necessari per il processamento di particolari tipi di dati, o suddiviso in più sottosistemi interconnessi. Al giorno d'oggi, ricordando la dicussione fatta nel capitolo precedente circa la disponibilità di un'ampia gamma di soluzioni off-the-shelf, è d'obbligo un'indagine di ciò che offre il mercato per capire se sia possibile sfruttare componenti o SoC forniti già testati e pronti per essere utilizzati, piuttosto che ricorrere ad una soluzione proprietaria che porta generalmente con sé considerevoli costi di sviluppo, testing e validazione. Per i motivi sopracitati è molto difficile, se non impossibile, delineare fin da questo punto una struttura complessiva e definitiva dell'hardware: ciò che importa è capire di cosa c'è bisogno e se esistono sul mercato offerte compatibili con i propri requisiti, cercando di prevedere anche successive richieste aggiuntive. Seguendo questa linea, eventuali variazioni potranno essere gestite similmente in seguito con poco sforzo. Il resto delle scelte riguardano l'hardware di più basso livello, formato in generale da:
+\begin{itemize}
+    \item microcontrollori veloci;
+    \item attuatori;
+    \item sensori;
+    \item interfacce e dispositivi di comunicazione;
+    \item hardware per il controllo e la supervisione;
+    \item sistemi di immagazzinamento di dati.
+\end{itemize}
+Niente di più si può dire su di esse senza scendere nei dettagli del caso di specie, come in seguito sarà fatto per il caso di studio di questo lavoro. Ci si può però limitare ad osservare che le osservazioni fatte precedentemente valgono anche per questi componenti.
 
 \phantomsection
 \subsection*{Il software}
