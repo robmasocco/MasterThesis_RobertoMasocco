@@ -18,12 +18,12 @@
 
 % Simple interface for the user to customize the chapter, section ... titles 
 \usepackage{titlesec}
-\titleformat{\chapter}[block]{\centering\bfseries\fontsize{16}{16}\selectfont}{\MakeUppercase{\chaptertitlename}\,\thechapter \vspace{0cm}\\}{0pt}{\MakeUppercase}
+\titleformat{\chapter}[block]{\centering\bfseries\fontsize{18}{18}\selectfont}{\MakeUppercase{\chaptertitlename}\,\thechapter \vspace{0cm}\\}{0pt}{\MakeUppercase}
 \titlespacing*{\chapter}{0pt}{-1.8cm}{0.5cm}
 \titlespacing{\section}{0pt}{0.5cm}{0cm}
 \titlespacing{\subsection}{0pt}{0.5cm}{0cm}
 \titleformat{\subsection}
-{\fontsize{14}{14}\selectfont\bfseries}{\thesubsection}{0.5em}{}
+{\fontsize{16}{16}\selectfont\bfseries}{\thesubsection}{0.5em}{}
 
 % Modify the chapter header in the table of contents
 \usepackage{titletoc}
