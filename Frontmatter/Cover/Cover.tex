@@ -2,7 +2,16 @@
 % Roberto Masocco <robmasocco@gmail.com>
 % July 26, 2021
 
+% This section has different margin settings
+\newgeometry{
+    inner=2.5cm,  % Inner margin
+	outer=2.5cm,  % Outer margin
+	top=2.5cm,    % Top margin
+	bottom=2.5cm % Bottom margin
+}
+
 \begin{titlepage}
+
 % Uni logo
 \newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
 \vspace{-0.5cm}
@@ -55,3 +64,5 @@ Correlatore: \textbf{\sndsupname}\\
 \today
 \end{center}
 \clearpage
+
+\restoregeometry

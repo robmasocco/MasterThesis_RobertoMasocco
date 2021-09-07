@@ -73,6 +73,8 @@
 \fancyhead[L]{\leftmark}
 \fancyfoot[R]{\thepage}
 \renewcommand{\sectionmark}[1]{\markright{#1}}
+\renewcommand{\headrulewidth}{0.3pt}
+\headheight=15pt
 
 % Pagestyle for frontmatter, mainmatter and backmatter
 \appto\frontmatter{\pagestyle{plain}}                                       
