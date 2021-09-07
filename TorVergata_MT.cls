@@ -18,7 +18,7 @@
 
 % Simple interface for the user to customize the chapter, section ... titles 
 \usepackage{titlesec}
-\titleformat{\chapter}[block]{\centering\bfseries\fontsize{14}{14}\selectfont}{\MakeUppercase{\chaptertitlename}\,\thechapter \vspace{0cm}\\}{0pt}{\MakeUppercase}
+\titleformat{\chapter}[block]{\centering\bfseries\fontsize{16}{16}\selectfont}{\MakeUppercase{\chaptertitlename}\,\thechapter \vspace{0cm}\\}{0pt}{\MakeUppercase}
 \titlespacing*{\chapter}{0pt}{-1.8cm}{0.5cm}
 \titlespacing{\section}{0pt}{0.5cm}{0cm}
 \titlespacing{\subsection}{0pt}{0.5cm}{0cm}
