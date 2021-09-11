@@ -1,20 +1,29 @@
-% List of Abbreviations page
+% List of abbreviations
 % Roberto Masocco <robmasocco@gmail.com>
-% July 26, 2021
+% September 11, 2021
 
-\chapter[Lista delle abbreviazioni]{Lista delle abbreviazioni}
-\renewcommand{\baselinestretch}{1.5}
+% This page has different margin settings
+\newgeometry{
+    inner=2.5cm,  % Inner margin
+	outer=2.5cm,  % Outer margin
+	top=2.5cm,    % Top margin
+	bottom=2.5cm  % Bottom margin
+}
+
+\fancyhf{}
+\thispagestyle{plain}
+
+\chapter[Lista delle abbreviazioni]{\centering Lista delle abbreviazioni}
 \fontsize{14}{14}\selectfont
 
 \begin{center}
-\begin{table}[H]
 \centering
 \setlength{\tabcolsep}{15pt}
-\setlength{\extrarowheight}{15pt}
 \fontsize{14}{14}\selectfont
 \begin{tabular}{ c c c }
 \multicolumn{1}{c}{\Large \textbf{Simbolo}} & & \multicolumn{1}{c}{\Large \textbf{Descrizione}}\\
-\hline\hline
+\hline\hline\\
+
 \textbf{CPU} & & Central Processing Unit\\
 \textbf{GPU} & & Graphic Processing Unit\\
 \textbf{OS}  & & Operating System\\
@@ -22,7 +31,8 @@
 \textbf{RAM} & & Random Access Memory\\
 \textbf{ROS} & & Robot Operating System\\
 \textbf{SoC} & & System on Chip\\
+
 \end{tabular}
-\end{table}
 \end{center}
-\newpage
+
+\restoregeometry

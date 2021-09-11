@@ -1,73 +1,65 @@
 % Master Thesis
 % Roberto Masocco <robmasocco@gmail.com>
-% July 26, 2021
-\documentclass[oneside, a4paper, 12pt, italian]{TorVergata_MT}
+% September 11, 2021
 
-% We put all necessary packages and newcommand etc. in Preamble.sty
-% Moreover, based on your materials add more packages and newcommands etc. in Preamble.sty
-\usepackage{Preamble}
+\documentclass[a4paper, 12pt, oneside]{book}
 
-% Margin settings for cover
-\geometry{
-	paper=a4paper, 
-	inner=4cm,  % Inner margin
-	outer=3cm,  % Outer margin
-	top=3cm,    % Top margin
-	bottom=3cm, % Bottom margin
-}
-
-% Thesis information
-% All the information below is used on the title page and wherever else is necessary
-\thesistitle{Framework di controllo open-source per robot intelligenti} % Thesis title, print it elsewhere with with \ttitle
-\Candidate{Roberto Masocco}                                             % Candidate name, print it elsewhere with \candidatename
-\FirstSupervisor{Prof. Daniele Carnevale}                               % First supervisor's name, print it elsewhere with \fstsupname
-\SecondSupervisor{Ing. Fabrizio Romanelli}                              % Second supervisor's name, print it elsewhere with \sndsupname
-\AcademicYear{2020/2021}                                                % Academic year, print it elsewhere with \AY
-\Specialist{Ingegneria dell'Automazione}                                % Specialist, print it elsewhere with \Sp
-\Department{Ingegneria Civile e Ingegneria Informatica}                 % Department, print it elsewhere with \Dep
+\usepackage{preamble}
 
 \begin{document}
-% Cover, dedication, acknowledgements, summary
-% Table of contents, abbreviations list
+
+% +-------------+
+% | FRONTMATTER |
+% +-------------+
 \frontmatter
-\pagestyle{plain}
-\input{Frontmatter/Cover/Cover}
-\input{Frontmatter/Dedication/Dedication}
-\input{Frontmatter/Acknowledgments/Acknowledgments}
-\input{Frontmatter/Summary/Summary}
-\begin{center}
-    \tableofcontents
-    \newpage
-\end{center}
-\input{Frontmatter/Abbreviations/Abbreviations}
 
-% Chapters
+% Covers
+\input{frontmatter/cover}
+\input{frontmatter/second_cover}
+
+% Dedication
+\input{frontmatter/dedication}
+
+% Acknowledgements
+\input{frontmatter/acknowledgments}
+
+% Table of Contents
+\doublespacing
+\tableofcontents
+\thispagestyle{plain}
+
+% List of abbreviations
+\input{frontmatter/abbreviations}
+
+% +------------+
+% | MAINMATTER |
+% +------------+
 \mainmatter
-\setupname
-\input{Mainmatter/Chapters/Chapter1}
-\input{Mainmatter/Chapters/Chapter2}
-\input{Mainmatter/Chapters/Chapter3}
-\input{Mainmatter/Chapters/Chapter4}
-\input{Mainmatter/Chapters/Chapter5}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\leftmark}
+\fancyfoot[L]{\rightmark}
+\fancyfoot[R]{\thepage}
+\renewcommand{\headrulewidth}{0.3pt}
 
-% Bibliography, figures list, tables list, appendices
+\input{chapters/chapter1}
+\input{chapters/chapter2}
+\input{chapters/chapter3}
+\input{chapters/chapter4}
+\input{chapters/chapter5}
+
+% +------------+
+% | BACKMATTER |
+% +------------+
 \backmatter
-\newpage
-\pagestyle{plain}
-\setcounter{page}{1}\renewcommand*{\thepage}{R\arabic{page}}
-\renewcommand{\bibname}{Bibliografia}
-\addcontentsline{toc}{chapter}{Bibliografia}
-\printbibliography
-\newpage
-\begin{center}
-    \listoffigures
-    \newpage
-    \listoftables
-    \newpage
-\end{center}
+\fancyhf{}
+\thispagestyle{plain}
 
+\listoffigures
+\addcontentsline{toc}{chapter}{Elenco delle figure}
 \newpage
-\setcounter{page}{1}
-\renewcommand*{\thepage}{A\arabic{page}}
-\input{Backmatter/Appendices/AppendixA}
+
+\printbibliography
+\addcontentsline{toc}{chapter}{Bibliografia}
+
 \end{document}
