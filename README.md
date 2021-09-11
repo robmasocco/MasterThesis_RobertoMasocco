@@ -6,4 +6,5 @@ Redatta in LaTeX su Overleaf, compilata con pdfLaTeX e i pacchetti inclusi in *p
 **Titolo:** Framework di controllo open-source per robot intelligenti
 
 **Relatore:** Prof. Daniele Carnevale
+
 **Correlatore:** Ing. Fabrizio Romanelli
