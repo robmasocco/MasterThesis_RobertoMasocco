@@ -1,0 +1,110 @@
+% LaTeX preamble with various settings
+% Roberto Masocco <robmasocco@gmail.com>
+% September 11, 2021
+
+% +----------+
+% | PACKAGES |
+% +----------+
+\usepackage[italian]{babel}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{csquotes}
+\usepackage{fancyhdr}
+\usepackage{float}
+\usepackage{lastpage}
+\usepackage{lipsum}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage[
+    backend=biber,
+    sorting=none,
+    style=numeric
+]{biblatex}
+\addbibresource{references.bib}
+\renewcommand{\bibfont}{\fontsize{12}{12}\selectfont}
+\usepackage{setspace}
+\usepackage{subfig}
+
+% +-------------+
+% | GLOBAL VARS |
+% +-------------+
+\newcommand{\autore}{Roberto Masocco}
+\newcommand{\matricola}{0285924}
+\newcommand{\Universita}{Università degli studi di Roma\\Tor Vergata}
+\newcommand{\UNIVERSITA}{\expandafter\MakeUppercase\expandafter{\Universita}}
+\newcommand{\Corso}{Corso di Laurea Magistrale in Ingegneria dell'Automazione}
+\newcommand{\CORSO}{\expandafter\MakeUppercase\expandafter{\Corso}}
+\newcommand{\Titolo}{Framework di controllo open-source per robot intelligenti}
+\newcommand{\TITOLO}{\expandafter\MakeUppercase\expandafter{\Titolo}}
+\newcommand{\relatore}{Daniele Carnevale}
+\newcommand{\correlatore}{Fabrizio Romanelli}
+\newcommand{\anno}{2020/2021}
+
+% +------------+
+% | PAGE STYLE |
+% +------------+
+\hfuzz 2pt
+\baselineskip=25pt
+\hoffset=0pt
+\voffset=-20pt
+\oddsidemargin=31pt
+\topmargin=20pt
+\headwidth=435pt
+\headheight=15pt
+\headsep=40pt
+\textheight=620pt
+\textwidth=435pt
+\footskip=40pt
+\pagestyle{fancy}
+% Plain page style
+\fancypagestyle{plain}{
+    \fancyhead{}
+    \fancyfoot[R]{\thepage}
+    \renewcommand{\headrulewidth}{0pt}
+    \renewcommand{\footrulewidth}{0pt}
+}
+
+% +--------------+
+% | ENVIRONMENTS |
+% +--------------+
+\newtheorem{obs}{Osservazione}[section]
+\newenvironment{oss}
+    {\begin{obs}\begin{normalfont}}
+    {\hfill $\square \!\!\!\!\checkmark$ \end{normalfont}\end{obs}}
+
+\newtheorem{pro}{Problema}[chapter]
+\newenvironment{prob}
+    {\begin{pro}\begin{normalfont}}
+    {\hfill $\spadesuit$ \end{normalfont}\end{pro}}
+
+\newtheorem{teor}{Teorema}[section]
+\newenvironment{teorema}
+    {\begin{teor}\textit }
+    {\hfill  \end{teor}}
+
+\newtheorem{defn}{Definizione}[section]
+\newenvironment{de}
+    {\begin{defn}\begin{normalfont}}
+    {\hfill $\clubsuit$ \end{normalfont}\end{defn}}
+
+% +---------------+
+% | TIKZ SETTINGS |
+% +---------------+
+\usepackage{tikz}
+\usetikzlibrary{arrows,fit,positioning,shapes}
+\tikzstyle{block} = [draw, rectangle, minimum height=3em, minimum width=4em]
+\tikzstyle{sum} = [draw, circle, node distance=0.8cm]
+\tikzstyle{input} = [coordinate]
+\tikzstyle{output} = [coordinate]
+\tikzstyle{pinstyle} = [pin edge={to-,thin,black}]
+
+% +---------------------+
+% |   CUSTOM COMMANDS   |
+% +---------------------+
+% To create a new unnumbered section with all fixes and refs
+\newcommand{\newsection}[1]{\section*{#1}\markright{#1}{}\addcontentsline{toc}{section}{#1}}
+
+% To create a new unnumbered subsection with all fixes and refs
+\newcommand{\newsubsection}[1]{\subsection*{#1}\addcontentsline{toc}{subsection}{#1}}

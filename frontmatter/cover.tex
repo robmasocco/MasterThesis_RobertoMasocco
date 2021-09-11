@@ -1,0 +1,52 @@
+% Main cover
+% Roberto Masocco <robmasocco@gmail.com>
+% September 11, 2021
+
+% This page has different margin settings
+\newgeometry{
+    inner=2.5cm,  % Inner margin
+	outer=2.5cm,  % Outer margin
+	top=2.5cm,    % Top margin
+	bottom=2.5cm  % Bottom margin
+}
+
+\begin{titlepage}
+
+\pagestyle{empty}
+
+% Logo
+\begin{figure}[H]
+    \begin{center}
+        \includegraphics[height=4cm]{figs/logo_utv_square.png}
+    \end{center}
+\end{figure}
+
+% Title
+\begin{center}
+    \Large{\textbf{\UNIVERSITA}} \\ \vspace{0.5cm}
+    \Large{FACOLT\`A DI INGEGNERIA} \\ \vspace{1.5cm}
+    \Large{\CORSO} \\ \vspace{1.5cm}
+    \textbf{Tesi di Laurea Magistrale} \\ \vspace{1.0cm}
+    \LARGE{\textbf{\Titolo}} \\ \vspace{1.5cm}
+
+    \large
+    \begin{tabbing}
+        \textbf{RELATORE} \= \hspace{9cm} \= \hfill \textbf{CANDIDATO}\\ \\
+        \relatore \>  \> \autore
+    \end{tabbing}
+    \vspace{0.1cm}
+    \begin{tabbing}
+        \textbf{CORRELATORE}
+    \end{tabbing}
+    \begin{tabbing}
+        \correlatore
+    \end{tabbing}
+
+    \vspace{0.1cm}
+    \vfill
+    \Large{A.A. \anno}
+\end{center}
+
+\end{titlepage}
+
+\restoregeometry

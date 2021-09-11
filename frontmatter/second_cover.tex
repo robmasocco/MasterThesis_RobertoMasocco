@@ -1,0 +1,57 @@
+% Second cover
+% Roberto Masocco <robmasocco@gmail.com>
+% September 11, 2021
+
+% This page has different margin settings
+\newgeometry{
+    inner=2.5cm,  % Inner margin
+	outer=2.5cm,  % Outer margin
+	top=2.5cm,    % Top margin
+	bottom=2.5cm  % Bottom margin
+}
+
+\pagestyle{empty}
+
+% Wide logo
+\begin{figure}[H]
+    \begin{center}
+        \includegraphics[height=4cm]{figs/logo_utv.png}
+    \end{center}
+\end{figure}
+
+% Department name
+\begin{center}
+\vspace{1cm}
+\Large\textit{DIPARTIMENTO DI INGEGNERIA CIVILE E INGEGNERIA INFORMATICA}
+\end{center}
+
+% Title
+\begin{center}
+\vspace{2cm}
+\Large\textbf{\fontsize{30}{30}\selectfont{\Titolo}}\\
+\vspace{1cm}
+\Large\textit{Tesi di Laurea Magistrale in Ingegneria dell'Automazione}\\
+\vspace{2cm}
+\end{center}
+
+% Names and signatures
+\begin{table}[H]
+\begin{tabular}{lll}
+\textit{Relatore:}	    & \hspace{124pt} &\\
+\textbf{\relatore}	    & \hspace{124pt} & Firma:\line(1,0){150} \vspace{0.5cm}\\
+\textit{Correlatore:}	& \hspace{124pt} &\\
+\textbf{\correlatore}	& \hspace{124pt} & Firma:\line(1,0){150} \vspace{0.5cm}\\
+\textit{Candidato:}	    & \hspace{124pt} &\\
+\textbf{\autore}	    & \hspace{124pt} & Firma:\line(1,0){150} \vspace{0.5cm}\\ 
+\end{tabular}
+\end{table}
+
+% Footer
+\begin{center} 
+\vspace{2.5cm}
+Anno Accademico \anno\\
+Università degli Studi di Roma "Tor Vergata", Facoltà d'Ingegneria\\
+Via del Politecnico 1, Roma, Italia
+\end{center}
+
+\restoregeometry
