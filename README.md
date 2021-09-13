@@ -1,14 +1,16 @@
 # MasterThesis_RobertoMasocco
-Tesi sperimentale di Laurea Magistrale in Ingegneria dell'Automazione
+Experimental Master Thesis in Automation Engineering
 
-Università di Roma "Tor Vergata", Facoltà d'Ingegneria
+University of Rome "Tor Vergata", Engineering Faculty
 
-Dipartimento di Ingegneria Civile ed Ingegneria Informatica
+Civil Engineering and Computer Engineering Department
 
-Redatta in LaTeX su Overleaf, compilata con pdfLaTeX e i pacchetti inclusi in *preamble.sty*.
+Written in LaTeX on Overleaf, compiled with pdfLaTeX with packages included in _preamble.sty_.
 
-**Titolo:** Framework di controllo open-source per robot intelligenti
+**Title:** Open-source control frameworks for smart robots
 
-**Relatore:** Prof. Daniele Carnevale
+**Language:** Italian
 
-**Correlatore:** Ing. Fabrizio Romanelli
+**First Advisor:** Prof. Daniele Carnevale
+
+**Second Advisor:** Eng. Fabrizio Romanelli
