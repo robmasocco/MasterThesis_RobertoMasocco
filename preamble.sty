@@ -30,6 +30,7 @@
     frame=lines
 }
 \lstset{style=oneside}
+\usepackage{afterpage}
 \usepackage{geometry}
 \usepackage{graphicx}
 \usepackage[
@@ -131,3 +132,6 @@
 
 % To create a new unnumbered subsection with all fixes and refs
 \newcommand{\newsubsection}[1]{\subsection*{#1}\addcontentsline{toc}{subsection}{#1}}
+
+% To leave a blank page after the current one
+\newcommand{\blankpage}{\null\thispagestyle{empty}\addtocounter{page}{-1}\newpage}
