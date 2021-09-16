@@ -148,7 +148,7 @@ Per dare un'idea dei principali servizi offerti da tale middleware ai fini di qu
 
 \newsubsection{Build system}
 \indent Nell'ecosistema di ROS, il software è diviso naturalmente in unità denominate \emph{pacchetti}. L'idea è che ogni pacchetto costituisca un modulo software a sé stante, atto a realizzare una specifica funzione nell'economia del sistema, eventualmente dialogando a vari livelli con altri e facendo uso di determinati servizi. Ciò nonostante, come si è più volte evidenziato finora, un robot è uno scenario diverso da quelli tipici dello sviluppo del software, dunque non è raro che uno sviluppatore possa trovarsi a lavorare su più pacchetti contemporaneamente. A tale complessità si aggiunge anche il fatto che se diversi moduli devono dialogare, i corrispondenti pacchetti risulteranno interdipendenti. Occorre dunque un sistema che renda semplice la costruzione di uno \emph{workspace} in cui sviluppare ed eseguire il software e la compilazione dei pacchetti al suo interno. La soluzione offerta da ROS 2 è costituita da un build system universale per ogni contesto in cui questo middleware viene impiegato, diviso in due livelli e le cui ragioni sono descritte in \cite{ros2_build}.\\
-In principio vi è \emph{colcon}\footnote{https://colcon.readthedocs.io/en/released/}. Doveva trattarsi di un software che automatizzasse e semplificasse la compilazione e l'installazione di pacchetti di codice Python o C++ tramite CMake\footnote{CMake (cmake.org) è un software libero multipiattaforma per l'automazione dello sviluppo, il cui nome è un'abbreviazione di "cross platform make". Nasce per semplificare il procedimento di build fornendo un linguaggio di scripting con cui automatizzarlo semplicemente anche per progetti complessi.} ad uso di ROS 2, ma ben presto divenne un progetto personale del suo autore di valenza più generale: di fatto oggi ROS 2 si appoggia a colcon che però può essere utilizzato del tutto indipendentemente per altri scopi. In essenza, colcon crea un workspace definendo alcune directories di base nel file system in cui andrà a costruire le applicazioni, e procede poi alla loro compilazione e installazione secondo regole automatiche o specificate, risolvendo automaticamente le dipendenze. Ogni pacchetto, per risultare intelligibile da colcon, deve essere munito di un \emph{package manifest} nella forma di un file XML\footnote{eXtensible Markup Language, basato su un meccanismo sintattico che consente di definire e controllare il significato degli elementi contenuti in un documento o in un testo. Viene usato nelle pagine web o per collezionare dati in un file di testo in modo che siano anche interpretabili da un programma, che ne effettua facilmente il \emph{parsing}.} in cui tutte le caratteristiche del modulo, come ad esempio il nome o le dipendenze, siano riportate. L'installazione può risolversi nella generazione di un file eseguibile o di un link simbolico verso una posizione del workspace in cui si effettuano le build: ciò semplifica notevolmente le cose quando si sta testando il software ed eseguendo più volte compilazioni dello stesso, evitando di mettere ogni volta mano ai punti in cui si installa rimandando sempre all'eseguibile più recente. Le molte opzioni da riga di comando di colcon consentono infine di interagire, se necessario, con i tool di più basso livello usati ai vari stadi della compilazione.\\
+In principio vi è \emph{colcon}\footnote{https://colcon.readthedocs.io/en/released/}. Doveva trattarsi di un software che automatizzasse e semplificasse la compilazione e l'installazione di pacchetti di codice Python o C++ tramite CMake\footnote{CMake (cmake.org) è un software libero multipiattaforma per l'automazione dello sviluppo, il cui nome è un'abbreviazione di "cross platform make". Nasce per semplificare il procedimento di build fornendo un linguaggio di scripting con cui automatizzarlo semplicemente anche per progetti complessi.} ad uso di ROS 2, ma ben presto divenne un progetto personale del suo autore di valenza più generale: di fatto oggi ROS 2 si appoggia a colcon che però può essere utilizzato del tutto indipendentemente per altri scopi. In essenza, colcon crea un workspace definendo alcune directories di base nel file system in cui andrà a costruire le applicazioni, e procede poi alla loro compilazione e installazione secondo regole automatiche o specificate, risolvendo automaticamente le dipendenze. Ogni pacchetto, per risultare intelligibile da colcon, deve essere munito di un \emph{package manifest} nella forma di un file XML\footnote{eXtensible Markup Language, basato su un meccanismo sintattico che consente di definire e controllare il significato degli elementi contenuti in un documento o in un testo. Viene usato nelle pagine web o per collezionare dati in un file di testo in modo che siano anche interpretabili da un programma: il \emph{parsing} può essere infatti eseguito facilmente grazie ad apposite librerie.} in cui tutte le caratteristiche del modulo, come ad esempio il nome o le dipendenze, siano riportate. L'installazione può risolversi nella generazione di un file eseguibile o di un link simbolico verso una posizione del workspace in cui si effettuano le build: ciò semplifica notevolmente le cose quando si sta testando il software ed eseguendo più volte compilazioni dello stesso, evitando di mettere ogni volta mano ai punti in cui si installa rimandando sempre all'eseguibile più recente. Le molte opzioni da riga di comando di colcon consentono infine di interagire, se necessario, con i tool di più basso livello usati ai vari stadi della compilazione.\\
 Oltre a normali problematiche inerenti la costruzione di pacchetti interdipendenti, bisogna risolvere quelle legate all'integrazione con le librerie e le interfacce di ROS 2. A ciò occorre il secondo modulo: \emph{ament}, descritto in \cite{ros2_ament}. Si tratta di una collezione di script Python, invocati automaticamente da colcon, che terminano il processo di build risolvendo le dipendenze verso altri packages ROS 2, generando infine degli script che verranno eseguiti automaticamente prima dell'avvio dell'eseguibile generato, per assicurarsi che gli altri moduli di ROS 2 necessari siano operativi in un environment corretto.\\
 Questo sistema risulta efficace: avendo vari pacchetti in un workspace, possono essere costruiti tutti insieme con un unico comando.\vfill\newpage
 
@@ -198,7 +198,51 @@ uint8[] data          # actual matrix data, size is (step * rows)
 \newpage
 
 \newsubsection{Uso del DDS: context e nodi}
-\indent
+\indent Affinché un programma, scritto in Python o C++, possa usare i servizi offerti da ROS 2 e dal DDS ad esso sottostante, è necessario creare ed impiegare alcuni oggetti ad essi relativi. Anche alla luce della precedente discussione circa i DDS, appare chiaro che una delle prime azioni da compiere debba essere la creazione di un DDS participant, inteso sempre come un'istanza del DDS relativa all'applicazione corrente. In ROS 2, l'inizializzazione dell'istanza del middleware e del DDS participant viene eseguita creando un oggetto denominato \emph{context}. È possibile farlo sia manualmente, magari specificando delle opzioni particolari, sia usando delle routine di default. Ad esempio, in C++ con rclcpp, all'inizio del programma solitamente si scrive la chiamata a funzione
+\begin{verbatim}
+    rclcpp::init(argc, argv)
+\end{verbatim}
+che esegue esattamente questi task di inizializzazione della libreria stessa e del DDS, agendo in questo caso su un context generico globale nell'address space del programma ed usando eventuali argomenti specifici di ROS 2 passati da riga di comando. Esso, così come l'istanza del DDS, può essere terminato con una chiamata a
+\begin{verbatim}
+    rclcpp::shutdown()
+\end{verbatim}
+quando opportuno.\\
+Il middleware e i servizi offerti da esso e dal DDS possono essere invocati ed usati solo fin quando c'è almeno un context attivo, facendovi riferimento. Il punto d'ingresso verso lo strato del middleware è rappresentato da un secondo oggetto chiamato \emph{nodo}, la cui denominazione richiama volutamente il concetto di nodo in un DDS.\\
+Concettualmente, nell'ecosistema di ROS, un nodo rappresenta un'entità in grado di svolgere dei compiti nel sistema. È infatti possibile definire un nodo ad-hoc estendendo una classe base offerta dalla libreria, aggiungendo i membri e i metodi necessari e facendo riferimento a un particolare context o a quello globale. In questo senso una complessità eccessiva è scoraggiata, in quanto è sempre preferibile che un nodo si occupi di una e una sola cosa.\\
+Può sembrare che un nodo ROS sia anche praticamente un'unità operativa, ma in realtà si tratta solamente di un costrutto che materializza un'applicazione nello strato del middleware, anche in modo potenzialmente non univoco: un'applicazione può infatti contenere e gestire contemporaneamente più nodi. Essenzialmente un nodo è una struttura dati atta a contenere, principalmente, dei DDS endpoints, relativi a vari topic e che in ROS 2 possono essere usati come:
+\begin{itemize}
+    \item publisher o subscriber di messaggi;
+    \item client o server di servizi;
+    \item client o server di azioni;
+\end{itemize}
+tutti potenzialmente entro lo stesso nodo. A questi ovviamente si possono aggiungere altri oggetti propri di ROS 2, come ad esempio dei timer. Le operazioni vere e proprie sono svolte dal codice dell'applicazione, che usa il nodo per interagire col middleware.\\
+A titolo di esempio si riporta il listato in C++ della definizione di due semplici nodi che fungano da server e client di un servizio che calcola la somma di due numeri interi.\newpage
+
+\begin{lstlisting}[language=C++, caption=Definizione delle classi dei nodi server e client del servizio \emph{AddTwoInts}.]
+/* AddTwoInts server */
+class AddTwoIntsServer : public rclcpp::Node
+{
+public:
+    AddTwoIntsServer();
+
+private:
+    void add_two_ints_clbk(const AddTwoInts::Request::SharedPtr request,
+                           const AddTwoInts::Response::SharedPtr response);
+    rclcpp::Service<AddTwoInts>::SharedPtr server_;
+};
+
+/* AddTwoInts client */
+class AddTwoIntsClient : public rclcpp::Node
+{
+public:
+    AddTwoIntsClient();
+    void call_srv(int a, int b);
+
+private:
+    rclcpp::Client<AddTwoInts>::SharedPtr client_;
+};
+\end{lstlisting}
+\newpage
 
 \newsubsection{Programmazione a eventi e concorrente}
 \indent
