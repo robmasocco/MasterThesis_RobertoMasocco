@@ -283,4 +283,17 @@ Nel secondo caso invece si sostituisce al nome dell'eseguibile quello di uno scr
 \indent Per diverse finalità quali testing o esame a posteriori, può essere necessario acquisire tutti i messaggi che sono stati gestiti dal middleware in un dato intervallo di tempo e su specifici topic. ROS 2 offre questo servizio mediante il sistema del \emph{bagging}\footnote{https://docs.ros.org/en/foxy/Tutorials/Ros2bag/Recording-And-Playing-Back-Data.html}: attraverso specifici comandi è possibile avviare una registrazione dei messaggi inviati su determinati topic in un file, di cui si possono specificare formato e algoritmo di compressione. Tale file, accompagnato anche da informazioni circa le interfacce dei messaggi che contiene, può essere processato in un altro software per visionare i dati. Le bags possono anche essere riprodotte interamente daccapo con un altro comando del middleware, che crea dei publisher ad-hoc i quali pubblicheranno nuovamente, ad un rate uguale o diverso, i messaggi registrati.
 
 \newsubsection{Visualizzazione e simulazione}
-\indent
+\indent Un'installazione completa di ROS 2 porta con sé degli strumenti non necessari al funzionamento di un robot, e di fatto superflui in tal caso, ma molto utili in fase di sviluppo. È doveroso citare almeno i seguenti:
+\begin{itemize}
+    \item \textbf{Gazebo\footnote{http://gazebosim.org/}:} si tratta di un simulatore open-source nativamente compatibile con ROS, in grado di interagire con i topic del middleware per acquisire e inviare dati. In esso è possibile costruire, mediante una sintassi basata su XML, modelli 3D di robot completi di sensori e attuatori e degli ambienti in cui essi si muovono, e testare gli algoritmi di controllo.
+    \vfill\newpage
+    \item \textbf{RViz2:} È la versione per ROS 2 del visualizzatore robotico RViz. Supporta tipiche interfacce legate ai sensori (e.g. immagini, pointclouds) e permette di leggere in tempo reale dai topic, offrendo una visualizzazione 3D delle informazioni raccolte. È particolarmente utile quando configurato per ascoltare dagli stessi topic su cui pubblicano i sensori montati su un robot, in quanto consente di "vedere" l'ambiente nello stesso modo in cui quest'ultimo lo percepisce.
+    \item \textbf{rqt\_graph ed rqt\_plot:} Sono due visualizzatori di informazioni legate ai topic. rqt\_graph consente di ottenere uno schema, più o meno dettagliato, dei nodi presenti nel sistema e nel dominio correnti, dei loro publishers e subscribers e più in generale di topic e servizi attivi, specificando quali siano le associazioni; un esempio con due nodi che si scambiano stringhe sul topic \emph{/chatter} è riportato in Figura \ref{fig:rqt_example}. rqt\_plot consente invece di sottoscriversi ai topic su cui si trasmettono dati numerici e visualizzarli in tempo reale in grafici 2D.
+\end{itemize}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\textwidth]{figs/chapter2/rqt_example.png}
+    \caption{Semplice esempio di schema generato da \emph{rqt\_graph}.}
+    \label{fig:rqt_example}
+\end{figure}
