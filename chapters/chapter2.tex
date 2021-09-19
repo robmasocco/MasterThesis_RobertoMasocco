@@ -245,7 +245,26 @@ private:
 \newpage
 
 \newsubsection{Programmazione a eventi e concorrente}
-\indent
+\indent Una volta definito e creato un nodo, il software di cui è composto il modulo in questione può iniziare ad operare secondo la sua programmazione ed usando il nodo per accedere ai servizi offerti dal middleware, ad esempio per pubblicare messaggi. Ciò nonostante, ROS 2 stabilisce uno standard per la gestione di alcune operazioni:
+\begin{itemize}
+    \item ricezione di messaggi;
+    \item ricezione di richieste di servizi;
+    \item ricezione di richieste di azioni;
+    \item scatti di timer periodici, che possono essere creati ed attivati sempre attraverso un nodo.
+\end{itemize}
+Tutte queste operazioni sono implementate per essere gestite come degli eventi a cui rispondere con delle \emph{callbacks}\footnote{Una callback è, in genere, una funzione che viene passata come parametro ad un'altra funzione, ed è richiamata ogni qual volta si verifica un particolare evento, in modo potenzialmente asincrono e casuale.}, in modo totalmente alternativo rispetto al resto delle operazioni compiute dal modulo software.\\
+Dal punto di vista del middleware, queste callback sono delle unità di lavoro da schedulare opportunamente, e la loro definizione viene fatta usando metodi offerti dall'oggetto nodo in modo che esso porti con sé informazioni circa il lavoro, periodico o meno, che richiede di svolgere. Tale lavoro può essere schedulato eseguendo un'operazione che nelle librerie standard di ROS 2 è denominata \emph{spin}. L'entità che prende in carico la richiesta di spin, creando delle code di callback da attivare, è chiamata \emph{executor}. Il modo più semplice di fare ciò in C++ è mediante la chiamata:
+\begin{verbatim}
+    rclcpp::spin(nodo);
+\end{verbatim}
+dove "nodo" è un'istanza della classe rclcpp::Node o sua derivata.\\
+Agli executors possono essere associati anche più nodi, e ve ne sono due tipi:
+\begin{itemize}
+    \item \textbf{Single Threaded:} sono quelli standard, creati automaticamente durante chiamate come la precedente; ogni callback di eventi relativi ai nodi associati a tale executor sarà inserita in un'unica coda, eseguita da un solo thread\footnote{Un thread o thread di esecuzione, in informatica, è una suddivisione di un processo in due o più filoni (istanze) o sottoprocessi che vengono eseguiti concorrentemente da un sistema di elaborazione monoprocessore (monothreading) o multiprocessore (multithreading) o multicore.};
+    \item \textbf{Multi Threaded:} rispetto ai precedenti, offrono la possibilità di suddividere le callback in diversi \emph{callback groups}, a ciascuno dei quali corrisponderà una diversa coda d'esecuzione gestita da un diverso thread;
+\end{itemize}
+Il secondo tipo costituisce di fatto il supporto alla programmazione concorrente offerto da ROS 2, consentendo anche di specificare se callback di uno stesso gruppo possano essere eseguite in parallelo o siano mutuamente esclusive. La definizione dei gruppi può essere fatta fornendo particolari opzioni all'atto della creazione di publishers e subscribers; si rimanda alla documentazione tecnica per ulteriori dettagli.
+\vfill\newpage
 
 \newsubsection{Launch System e Launch Files}
 \indent
