@@ -263,11 +263,21 @@ Agli executors possono essere associati anche più nodi, e ve ne sono due tipi:
     \item \textbf{Single Threaded:} sono quelli standard, creati automaticamente durante chiamate come la precedente; ogni callback di eventi relativi ai nodi associati a tale executor sarà inserita in un'unica coda, eseguita da un solo thread\footnote{Un thread o thread di esecuzione, in informatica, è una suddivisione di un processo in due o più filoni (istanze) o sottoprocessi che vengono eseguiti concorrentemente da un sistema di elaborazione monoprocessore (monothreading) o multiprocessore (multithreading) o multicore.};
     \item \textbf{Multi Threaded:} rispetto ai precedenti, offrono la possibilità di suddividere le callback in diversi \emph{callback groups}, a ciascuno dei quali corrisponderà una diversa coda d'esecuzione gestita da un diverso thread;
 \end{itemize}
-Il secondo tipo costituisce di fatto il supporto alla programmazione concorrente offerto da ROS 2, consentendo anche di specificare se callback di uno stesso gruppo possano essere eseguite in parallelo o siano mutuamente esclusive. La definizione dei gruppi può essere fatta fornendo particolari opzioni all'atto della creazione di publishers e subscribers; si rimanda alla documentazione tecnica per ulteriori dettagli.
-\vfill\newpage
+Il secondo tipo costituisce di fatto il supporto alla programmazione concorrente offerto da ROS 2, consentendo anche di specificare se callback di uno stesso gruppo possano essere eseguite in parallelo o siano mutuamente esclusive. La definizione dei gruppi può essere fatta fornendo particolari opzioni all'atto della creazione di publishers e subscribers; si rimanda alla documentazione tecnica per ulteriori dettagli.\vfill\newpage
 
 \newsubsection{Launch System e Launch Files}
-\indent
+\indent Un eseguibile ROS 2 va avviato usando particolari comandi del middleware, per assicurarsi di attivare tutti i demoni\footnote{Un demone, in informatica e più in generale nei sistemi operativi multitasking, è un programma eseguito in background, cioè senza che sia sotto il controllo diretto dell'utente, tipicamente per fornire un servizio.} eventualmente necessari e i sottosistemi di logging. Il sottosistema del middleware incaricato di fare ciò è chiamato \emph{launch system}.\\
+Esistono due modalità:
+\begin{itemize}
+    \item avvio diretto tramite i comandi del launch system;
+    \item avvio indiretto tramite i \emph{launch files};
+\end{itemize}
+Nel primo caso il comando ha la forma seguente:
+\begin{verbatim}
+    ros2 run PACKAGE EXECUTABLE
+\end{verbatim}
+a cui possono fare seguito gli argomenti di input per l'eseguibile stesso, quelli per la libreria con l'opzione \emph{--ros-args}, più eventuali prefissi per l'impiego di debugger.\\
+Nel secondo caso invece si sostituisce al nome dell'eseguibile quello di uno script Python che fa parte del package. In esso si specifica, secondo un formato per cui si rimanda alla documentazione tecnica\footnote{https://docs.ros.org/en/foxy/Tutorials/Launch-Files/Creating-Launch-Files.html}, la configurazione con cui va avviato l'eseguibile, completa di dettagli che vanno dagli argomenti di input fino a come deve essere gestito il logging in console o su file, o entrambi. Eventuali log file generati dall'output del processo, a meno che non si specifichi il contrario, saranno salvati in un percorso standard, tipicamente una subdirectory della home directory.\vfill\newpage
 
 \newsubsection{Data recording e playback}
 \indent
