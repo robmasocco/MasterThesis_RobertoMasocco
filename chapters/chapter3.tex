@@ -109,35 +109,35 @@ Tale soluzione assicura una comunicazione affidabile, full-duplex e ad alta velo
 \begin{figure}
     \centering
     \includegraphics[width=0.9\textwidth]{figs/chapter3/px4-controller.jpg}
-    \caption{Schema del controllore di volo multilivello implementato da PX4.}
+    \caption{Schema del controllore di volo multilivello implementato da PX4, con i diversi tempi di campionamento dei vari sottosistemi.}
     \label{fig:px4controller}
 \end{figure}
 
 \begin{figure}
     \centering
     \includegraphics[width=0.9\textwidth]{figs/chapter3/px4-angularcont.jpg}
-    \caption{Dettaglio del controllore di PX4 per la stabilizzazione angolare.}
+    \caption{Dettaglio del controllore PID con filtri per la stabilizzazione angolare.}
     \label{fig:px4angular}
 \end{figure}
 
 \begin{figure}
     \centering
     \includegraphics[width=0.9\textwidth]{figs/chapter3/px4-attitude.jpg}
-    \caption{Dettaglio del controllore di PX4 per il controllo d'assetto.}
+    \caption{Dettaglio del controllore di PX4 per la regolazione dell'assetto basato, sui quaternioni d'orientamento.}
     \label{fig:px4attitude}
 \end{figure}
 
 \begin{figure}
     \centering
     \includegraphics[width=0.9\textwidth]{figs/chapter3/px4-velocity.jpg}
-    \caption{Dettaglio del controllore di PX4 per il controllo della velocità lineare.}
+    \caption{Dettaglio del controllore PID con filtri per la regolazione della velocità lineare.}
     \label{fig:px4velocity}
 \end{figure}
 
 \begin{figure}
     \centering
-    \includegraphics[width=0.9\textwidth]{figs/chapter3/px4-position.jpg}
-    \caption{Dettaglio del controllore di PX4 per il controllo della posizione.}
+    \includegraphics[width=0.7\textwidth]{figs/chapter3/px4-position.jpg}
+    \caption{Dettaglio del controllore proporzionale per l'inseguimento della posizione.}
     \label{fig:px4position}
 \end{figure}
 
@@ -165,7 +165,7 @@ Le piattaforme Nvidia Jetson sono state selezionate per questo scopo, in quanto 
 \begin{table}[h]
     \centering
     \begin{tabular}{c|c}
-        \textbf{CPU} & 6-core NVIDIA Carmel ARM v8.2 64-bit CPU \\
+        \textbf{CPU} & 6-core NVIDIA Carmel ARM v8.2 64-bit\\
         \textbf{GPU} & NVIDIA Volta architecture, 384 CUDA cores, CUDA 10.1\\
         \textbf{RAM} & 8 GB 128-bit LPDDR4x\\
         \textbf{Interfacce} & Gigabit Ethernet, WiFi, Bluetooth, GPIO, I2C/S, SPI, UART, USB
@@ -182,7 +182,23 @@ Le piattaforme Nvidia Jetson sono state selezionate per questo scopo, in quanto 
 \end{figure}
 
 \newsection{Operating System}
-\indent
+\indent Appare chiaro dall'architettura illustrata finora come in questo progetto si sia reso necessario interagire con l'hardware, a basso livello, e contemporaneamente sviluppare un software stratificato che lo pilotasse e implementasse opportune logiche decisionali. Per far questo, è apparsa da subito chiara la necessità di un sistema operativo che consentisse di operare facilmente ad ogni livello. Le soluzioni Jetson, basate su architettura ARM, sono studiate per essere utilizzate con il sistema operativo Linux, che soddisfa totalmente tali requisiti operativi. Ciò nonostante, è stato necessario un lavoro di configurazione ad-hoc a partire dall'installazione fornita da Nvidia per meglio adattarla al presente caso d'uso e consentire l'integrazione del resto dell'hardware e degli strumenti software impiegati.\\
+L'installazione di default offerta da Nvidia è costituita dalla distribuzione Ubuntu Linux 18.04 con kernel 4.9 PREEMPT\footnote{La versione PREEMPT del kernel Linux è caratterizzata da latenze ridotte, in quanto fatta eccezione per alcune sezioni molto critiche esso risulta sempre interrompibile.}, racchiusa in una collezione di package denominata \emph{Linux 4 Tegra}. Si tratta di un'installazione stabile e testata, dotata di un set di pacchetti e librerie più limitato rispetto alle versioni base ma di tutti i driver necessari ad usare l'hardware presente sulla board. La prima strada intrapresa è stata quella dell'aggiornamento a Ubuntu 20.04, ancora non standardizzata da Nvidia, lungo la quale sono sorti diversi problemi legati all'aggiornamento delle librerie grafiche pian piano risolti. Successivamente, allo scopo di aumentare ancora di più la responsività e la predicibilità del sistema, è stata tentata la costruzione di un'installazione stabile con kernel 4.9 PREEMPT RT\footnote{La versione PREEMPT RT del kernel, ottenuta mediante l'applicazione di un set di patches prima della compilazione, è caratterizzata dall'interrompibilità totale in qualunque punto e dall'assenza di primitive di sincronizzazione di tipo \emph{locking}.}. Nonostante ripetuti tentativi di ricompilazione del kernel e di aggiornamento del sistema, sono sempre stati rilevati dei problemi di compatibilità con i driver e le librerie offerti da Nvidia, e gli incrementi prestazionali ricavati sono stati giudicati eccessivamente ridotti; oltre a ciò, si sospetta che l'aver reso interamente interrompibili anche i driver della GPU abbia reso meno efficienti alcuni algoritmi implementati su di essa. Per tali ragioni questa strada è stata abbandonata, e l'installazione PREEMPT è stata consolidata con delle performance accettabili sia sul fronte della varianza dei timer ad alta risoluzione, sia su quello dell'affidabilità delle schedulazioni soft real-time implementate mediante lo scheduler di sistema. Si ritiene, come si mostrerà, che un tale sistema sia adatto anche all'implementazione di loop di controllo veloci con campionamenti non inferiori al singolo millisecondo, naturalmente quando non si è complessivamente vicini ai suoi limiti di carico. Per misurare le latenze e valutare le prestazioni complessive è stata impiegata la utility \emph{cyclictest}\footnote{https://wiki.linuxfoundation.org/realtime/documentation/howto/tools/cyclictest/start}, una cui esecuzione è mostrata a titolo di esempio nel listato seguente.\vfill\newpage
+
+\begin{lstlisting}[language=bash, caption=Esempio di benchmark del SoC montato sul drone eseguito con la utility \emph{cyclictest}.]
+nxdrone:~$ sudo cyclictest -m -p98 --smp
+# /dev/cpu_dma_latency set to 0us
+policy: fifo: loadavg: 0.33 0.61 0.32 1/381 10460          
+
+T: 0 (10428) P:98 I:1000 C:   3365 Min:      7 Act:   30 Avg:   19 Max:     147
+T: 1 (10431) P:98 I:1500 C:   2241 Min:      7 Act:   21 Avg:   22 Max:     294
+T: 2 (10432) P:98 I:2000 C:   1680 Min:      8 Act:   16 Avg:   27 Max:     352
+T: 3 (10434) P:98 I:2500 C:   1343 Min:      8 Act:   23 Avg:   22 Max:     155
+T: 4 (10435) P:98 I:3000 C:   1118 Min:      7 Act:   30 Avg:   25 Max:     147
+T: 5 (10436) P:98 I:3500 C:    958 Min:      9 Act:   22 Avg:   24 Max:     319
+\end{lstlisting}
+
+Da tale esecuzione si evince come le latenze siano comunque contenute, in media nell'ordine delle decine di microsecondi, con dei picchi attesi data la configurazione del sistema, dipendenti dal carico ma comunque mai eccessivi.
 
 \newsection{Software}
 \indent
