@@ -70,21 +70,28 @@ Per fornire spinta sono stati montati quattro motori brushless T-Motor U3 da 700
 \end{figure}
 
 \newsubsection{Controllore di volo}
-\indent La prima parte dell'elettronica di bordo è costituita da un sistema hard real-time\footnote{Con tale locuzione si indica, in genere, un calcolatore elettronico o un controllore numerico per il quale sono specificati una serie di task, ciascuno con delle scadenze temporali precise, e la cui programmazione e realizzazione devono consentire il rispetto tassativo di tali scadenze.} di basso livello, collegato direttamente a sensori e motori, con il compito di localizzarsi in tempo reale e stabilizzare il drone durante le diverse fasi del volo. Per il presente lavoro la scelta è ricaduta sull'Holybro Pixhawk 4, mostrato in Figura \ref{fig:pixhawk}, board compatibile con il firmware open-source PX4 Autopilot\footnote{https://px4.io/}, scritto in C++. Le caratteristiche tecniche principali della board sono le seguenti:
-\begin{itemize}
-    \item \textbf{CPU:} STM32F765 32 Bit Arm Cortex-M7, dedicata all'esecuzione del firmware PX4 sul Real-Time Operating System NuttX\footnote{https://nuttx.apache.org/};
-    \item \textbf{I/O Processor} STM32F100 32 Bit Arm Cortex-M3, dedicato all'acquisizione dei dati dai sensori e alla gestione delle interfacce di comunicazione verso ESC o altri componenti;
-    \vfil\clearpage
-    \item \textbf{Sensori:} sono inclusi nel package IMU\footnote{Una Inertial Measurement Unit è un sistema avionico che implementa il sistema di navigazione inerziale di un aeromobile. È basato su sensori inerziali, come accelerometri e giroscopi, che permettono un monitoraggio della dinamica di un mezzo in movimento.}, magnetometro, barometro, GPS (disattivato e scollegato come da regolamento del Contest);
-    \item \textbf{Interfacce:} UART, GPIO, I2C, SPI, CAN, USB.
-\end{itemize}
+\indent La prima parte dell'elettronica di bordo è costituita da un sistema hard real-time\footnote{Con tale locuzione si indica, in genere, un calcolatore elettronico o un controllore numerico per il quale sono specificati una serie di task, ciascuno con delle scadenze temporali precise, e la cui programmazione e realizzazione devono consentire il rispetto tassativo di tali scadenze.} di basso livello, collegato direttamente a sensori e motori, con il compito di localizzarsi in tempo reale e stabilizzare il drone durante le diverse fasi del volo. Per il presente lavoro la scelta è ricaduta sull'Holybro Pixhawk 4, mostrato in Figura \ref{fig:pixhawk}, board compatibile con il firmware open-source PX4 Autopilot\footnote{https://px4.io/}, scritto in C++. Le caratteristiche tecniche principali della board sono riassunte nella Tabella \ref{tab:pix}.
+\vspace{1.25cm}
+\begin{table}[h]
+    \centering
+    \begin{tabular}{c|c}
+        \textbf{CPU} & STM32F765 32 Bit Arm Cortex-M7 \\
+        \textbf{I/O Processor} & STM32F100 32 Bit Arm Cortex-M3 \\
+        \textbf{Sensori} & IMU\footnote{Una Inertial Measurement Unit è un sistema avionico che implementa il sistema di navigazione inerziale di un aeromobile. È basato su sensori inerziali, come accelerometri e giroscopi, che permettono un monitoraggio della dinamica di un mezzo in movimento.}, magnetometro, barometro, GPS\\
+        \textbf{Interfacce} & UART, GPIO, I2C, SPI, CAN, USB
+    \end{tabular}
+    \caption{Caratteristiche tecniche del controllore di volo Pixhawk 4.}
+    \label{tab:pix}
+\end{table}
+\vfill\clearpage
+La CPU è dedicata all'esecuzione del firmware PX4 sul Real-Time Operating System NuttX\footnote{https://nuttx.apache.org/}, mentre l'I/O processor all'acquisizione dei dati dai sensori e alla gestione delle interfacce di comunicazione verso ESC o altri componenti. Come da regolamento del Contest, il GPS è stato disattivato e scollegato.\\
 Alla board è stata collegata una ricevente radio per aggiungere il controllo manuale con l'ausilio di un radiocomando apposito.\\
 La caratteristica saliente di questo controllore è la compatibilità con il progetto PX4. Quest'ultimo, essendo open-source, ha consentito di imparare molto circa il funzionamento e il controllo di un drone, ma anche di intervenire sulla configurazione in modo mirato quando necessario, per eseguire tarature o identificare e risolvere i problemi. I principali servizi offerti da questo firmware, che sono stati ritoccati ed impiegati come parte di questo lavoro per mettere in volo il prototipo secondo le specifiche definite dal Contest, sono i seguenti:
 \begin{itemize}
     \item possibilità di controllare il velivolo in posizione, velocità, accelerazione o assetto tramite un computer di bordo esterno;
     \item fusione delle misure acquisite da diversi sensori, sia integrati che esterni ed anche temporalmente sfasati, mediante un filtro di Kalman esteso denominato EKF2\footnote{https://docs.px4.io/master/en/advanced\_config/tuning\_the\_ecl\_ekf.html};
     \item link di comunicazione seriale robusto ad alta velocità verso computer di bordo;
-    \item filtri dinamici integrati per reiezionare vibrazioni spurie o altri disturbi esterni dalle misure.
+    \item filtri dinamici regolabili per rigettare dalle misure vibrazioni spurie o altri disturbi esterni.
 \end{itemize}
 \vfill\newpage
 L'algoritmo di controllo nonlineare implementato da PX4 è descritto in \cite{px4control}, e una sua schematizzazione è mostrata in Figura \ref{fig:px4controller}, con dettagli nelle Figure \ref{fig:px4angular}, \ref{fig:px4attitude}, \ref{fig:px4velocity}, \ref{fig:px4position}. A ciascun livello, ogni controllore prende in ingresso un riferimento da inseguire e calcola un controllo, da applicare al livello successivo oppure direttamente ai motori tramite opportuno mixing. Ai fini del Contest, tra le modalità disponibili sono state impiegate quelle in posizione e in velocità, a seguito di uno studio accurato del sistema e di una precisa taratura dei suoi vari guadagni e saturazioni.\\
@@ -152,7 +159,27 @@ Tale soluzione assicura una comunicazione affidabile, full-duplex e ad alta velo
 \end{figure}
 
 \newsubsection{Computer di bordo}
-\indent
+\indent La restante parte dell'elettronica è costituita dal computer di bordo. Si tratta in questo caso di un calcolatore di più alto livello, dedicato allo svolgimento dei task più lenti di supervisione e decisione, nonché ai compiti di processamento più onerosi per ottenere una stima precisa della posa locale, implementando le logiche di navigazione e orientamento.\\
+Le piattaforme Nvidia Jetson sono state selezionate per questo scopo, in quanto soluzioni SoC altamente efficienti e dotate di svariato hardware integrato, predisposte anche per lo sviluppo di software di qualunque tipo grazie al supporto del sistema operativo Linux. Il modello specifico che è stato adottato è la development board Xavier NX, rappresentata in Figura \ref{fig:nx}. La principale caratteristica di queste soluzioni è l'ampia e varia disponibilità di risorse in un package di dimensioni e consumi contenuti. Le caratteristiche salienti e più utili ai fini del presente lavoro sono riassunte nella Tabella \ref{tab:nx}.
+\vspace{0.5cm}
+\begin{table}[h]
+    \centering
+    \begin{tabular}{c|c}
+        \textbf{CPU} & 6-core NVIDIA Carmel ARM v8.2 64-bit CPU \\
+        \textbf{GPU} & NVIDIA Volta architecture, 384 CUDA cores, CUDA 10.1\\
+        \textbf{RAM} & 8 GB 128-bit LPDDR4x\\
+        \textbf{Interfacce} & Gigabit Ethernet, WiFi, Bluetooth, GPIO, I2C/S, SPI, UART, USB
+    \end{tabular}
+    \caption{Caratteristiche tecniche del SoC Nvidia Jetson Xavier NX.}
+    \label{tab:nx}
+\end{table}
+
+\begin{figure}
+    \centering
+    \includegraphics[scale=0.35]{figs/chapter3/nx.jpg}
+    \caption{SoC Nvidia Jetson Xavier NX.}
+    \label{fig:nx}
+\end{figure}
 
 \newsection{Operating System}
 \indent
