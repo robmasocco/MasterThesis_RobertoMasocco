@@ -32,7 +32,7 @@ Il prototipo realizzato, assieme ad un esempio di landmark ArUco, sono ritratti 
 \newsubsection{Frame e motori}
 \indent La primissima decisione progettuale ha riguardato la scelta del \emph{frame}, inteso come struttura portante, su cui montare le varie parti. Nell'economia di un drone volante, in special modo autonomo quindi in grado di stabilizzarsi da solo grazie al feedback di vari sensori di bordo, tale struttura deve essere il più leggera e rigida possibile: il primo requisito riguarda naturalmente le prestazioni, l'autonomia e la controllabilità, mentre il secondo ha risvolti sull'accuratezza delle misure di accelerometri e giroscopi. È infatti comune rilevare durante il volo, mediante uno spettrogramma ricavato dai campioni degli accelerometri, delle vibrazioni dovute a vari fattori. Un esempio è mostrato in Figura \ref{fig:flightspec}, relativo ad una prova di volo automatico in pattugliamento. Prendendola ad esempio, si possono notare dei contributi frequenziali predominanti intorno ai 90 Hz, correlati ad altri precedenti nello spettro e di ampiezza minore: sono le armoniche dei motori. Tali vibrazioni non possono naturalmente essere eliminate, e vanno filtrate e reiezionate dal sistema di controllo e stabilizzazione angolare. Alla fine dello spettrogramma (a circa 6:40) si nota quello che sembra un breve urto, che corrisponde al contatto col suolo in fase di atterraggio, in questo caso preciso e privo di rimbalzo. Eventuali altri contributi significativi, in questo caso assenti, sarebbero indice di problemi meccanici o tarature sbagliate del sistema di controllo.\\
 Avendo a che fare con questo genere di prototipo però, è necessario anche uno spazio sufficiente ad ospitare i sistemi elettronici, i sensori e le batterie. Per questo la scelta è ricaduta sul frame Tarot 650, realizzato in carbonio e dotato di una piattaforma centrale sufficientemente ampia da permettere il montaggio dell'elettronica di bordo ricavando due livelli superiori e di un pacco batterie in basso. L'intera struttura è stata pensata avendo cura di spostare il meno possibile lungo la verticale il centro di massa aggiungendo carico al frame: montando la batteria in basso questo tende naturalmente a scendere, imprimendo al sistema un comportamento indesiderato simile a quello di un pendolo composto, caratterizzato da oscillazioni difficili da contrastare. A seguito delle diverse prove e dei vari incidenti di percorso, sono state aggiunte dei pezzi volti a irrobustire i punti più fragili e ridurre ancor di più le vibrazioni. Le ulteriori parti meccaniche necessarie sono state modellate con strumenti CAD e stampate in 3D in PLA e TPU: degli esempi particolarmente rilevanti sono mostrati nelle Figure \ref{fig:batpack}, \ref{fig:frontcam}, \ref{fig:canopy}, \ref{fig:triangle}.\\
-Per fornire spinta sono stati montati quattro motori brushless T-Motor U3 da 700 W e 700 rpm/V, dotati di eliche da 12 pollici. Essi sono pilotati dal controllore di volo mediante delle ESC\footnote{Electronic Speed Controller.} F35A BLHeli\_32 digitali a 32 bit con protocollo DShot, configurato per trasmissione a 1200 kpbs. Tale protocollo è particolarmente indicato per la trasmissione di comandi agli attuatori dei droni in quanto garantisce bassissima latenza, robustezza agli errori sui bit, e permette di comunicare direttamente con le ESC per configurarle, consentendo ad esempio di impostare il verso di rotazione dei motori senza dover dissaldarne i cavi per invertire le polarità.
+Per fornire spinta sono stati montati quattro motori brushless T-Motor U3 da 700 W e 700 rpm/V, dotati di eliche da 12 pollici. Essi sono pilotati dal controllore di volo mediante delle ESC\footnote{Electronic Speed Controller.} F35A BLHeli\_32 digitali a 32 bit con protocollo DShot, configurato per trasmissione a 1200 kpbs. Tale protocollo è particolarmente indicato per la trasmissione di comandi agli attuatori dei droni in quanto garantisce bassissima latenza, robustezza agli errori sui bit, e permette di comunicare direttamente con le ESC per configurarle, consentendo ad esempio di impostare il verso di rotazione dei motori senza dover dissaldarne i cavi per invertire le polarità.\vfill\clearpage
 
 \begin{figure}
     \centering
@@ -50,8 +50,8 @@ Per fornire spinta sono stati montati quattro motori brushless T-Motor U3 da 700
 
 \begin{figure}
     \centering
-    \includegraphics[width=0.9\textwidth]{figs/chapter3/camera-holder.png}
-    \caption{Modello CAD del supporto della camera frontale, inclinata verso il basso di 26.6°..}
+    \includegraphics[scale=0.45]{figs/chapter3/camera-holder.png}
+    \caption{Modello CAD del supporto della camera frontale, inclinata verso il basso di 26.6°.}
     \label{fig:frontcam}
 \end{figure}
 
@@ -64,10 +64,95 @@ Per fornire spinta sono stati montati quattro motori brushless T-Motor U3 da 700
 
 \begin{figure}
     \centering
-    \includegraphics[width=0.9\textwidth]{figs/chapter3/triangle.png}
+    \includegraphics[scale=0.4]{figs/chapter3/triangle.png}
     \caption{Modello CAD del rinforzo triangolare per i carrelli del frame.}
     \label{fig:triangle}
 \end{figure}
+
+\newsubsection{Controllore di volo}
+\indent La prima parte dell'elettronica di bordo è costituita da un sistema hard real-time\footnote{Con tale locuzione si indica, in genere, un calcolatore elettronico o un controllore numerico per il quale sono specificati una serie di task, ciascuno con delle scadenze temporali precise, e la cui programmazione e realizzazione devono consentire il rispetto tassativo di tali scadenze.} di basso livello, collegato direttamente a sensori e motori, con il compito di localizzarsi in tempo reale e stabilizzare il drone durante le diverse fasi del volo. Per il presente lavoro la scelta è ricaduta sull'Holybro Pixhawk 4, mostrato in Figura \ref{fig:pixhawk}, board compatibile con il firmware open-source PX4 Autopilot\footnote{https://px4.io/}, scritto in C++. Le caratteristiche tecniche principali della board sono le seguenti:
+\begin{itemize}
+    \item \textbf{CPU:} STM32F765 32 Bit Arm Cortex-M7, dedicata all'esecuzione del firmware PX4 sul Real-Time Operating System NuttX\footnote{https://nuttx.apache.org/};
+    \item \textbf{I/O Processor} STM32F100 32 Bit Arm Cortex-M3, dedicato all'acquisizione dei dati dai sensori e alla gestione delle interfacce di comunicazione verso ESC o altri componenti;
+    \vfil\clearpage
+    \item \textbf{Sensori:} sono inclusi nel package IMU\footnote{Una Inertial Measurement Unit è un sistema avionico che implementa il sistema di navigazione inerziale di un aeromobile. È basato su sensori inerziali, come accelerometri e giroscopi, che permettono un monitoraggio della dinamica di un mezzo in movimento.}, magnetometro, barometro, GPS (disattivato e scollegato come da regolamento del Contest);
+    \item \textbf{Interfacce:} UART, GPIO, I2C, SPI, CAN, USB.
+\end{itemize}
+Alla board è stata collegata una ricevente radio per aggiungere il controllo manuale con l'ausilio di un radiocomando apposito.\\
+La caratteristica saliente di questo controllore è la compatibilità con il progetto PX4. Quest'ultimo, essendo open-source, ha consentito di imparare molto circa il funzionamento e il controllo di un drone, ma anche di intervenire sulla configurazione in modo mirato quando necessario, per eseguire tarature o identificare e risolvere i problemi. I principali servizi offerti da questo firmware, che sono stati ritoccati ed impiegati come parte di questo lavoro per mettere in volo il prototipo secondo le specifiche definite dal Contest, sono i seguenti:
+\begin{itemize}
+    \item possibilità di controllare il velivolo in posizione, velocità, accelerazione o assetto tramite un computer di bordo esterno;
+    \item fusione delle misure acquisite da diversi sensori, sia integrati che esterni ed anche temporalmente sfasati, mediante un filtro di Kalman esteso denominato EKF2\footnote{https://docs.px4.io/master/en/advanced\_config/tuning\_the\_ecl\_ekf.html};
+    \item link di comunicazione seriale robusto ad alta velocità verso computer di bordo;
+    \item filtri dinamici integrati per reiezionare vibrazioni spurie o altri disturbi esterni dalle misure.
+\end{itemize}
+\vfill\newpage
+L'algoritmo di controllo nonlineare implementato da PX4 è descritto in \cite{px4control}, e una sua schematizzazione è mostrata in Figura \ref{fig:px4controller}, con dettagli nelle Figure \ref{fig:px4angular}, \ref{fig:px4attitude}, \ref{fig:px4velocity}, \ref{fig:px4position}. A ciascun livello, ogni controllore prende in ingresso un riferimento da inseguire e calcola un controllo, da applicare al livello successivo oppure direttamente ai motori tramite opportuno mixing. Ai fini del Contest, tra le modalità disponibili sono state impiegate quelle in posizione e in velocità, a seguito di uno studio accurato del sistema e di una precisa taratura dei suoi vari guadagni e saturazioni.\\
+Il sistema di comunicazione con il computer di bordo è invece costituito da un bridge tra due DDS, denominato \emph{microRTPS Bridge}, comprensivo di meccanismi di serializzazione e deserializzazione dei pacchetti in transito sul link seriale. Nello specifico, il firmware integra il DDS basico \emph{uORB}, usato anche per le varie comunicazioni interprocesso nel firmware stesso, mentre l'altro lato della comunicazione è basato su \emph{FastDDS}\footnote{https://www.eprosima.com/index.php/products-all/eprosima-fast-dds} di eProsima. Le due parti della comunicazione seriale sono gestite da due software, uno in esecuzione sul controllore di volo e per questo denominato \emph{client}, ed uno presente sul computer di bordo e chiamato \emph{agent}.\\
+Tale soluzione assicura una comunicazione affidabile, full-duplex e ad alta velocità tra i due componenti, nonché la semplice integrazione con altri middleware quali ad esempio ROS 2. Anche questo progetto è open-source, ed è stato modificato in svariati punti durante questo lavoro al fine di produrre una versione migliore di quella ufficiale, nella quale sono state rilevate gravi mancanze nella gestione di eventuali pacchetti malformati, che potevano portare casualmente al crash del programma. Una schematizzazione dell'architettura di comunicazione è mostrata in Figura \ref{fig:rtpsbridge}.
+\vfill\newpage
+
+\begin{figure}
+    \centering
+    \includegraphics[scale=0.1]{figs/chapter3/pixhawk4.jpg}
+    \caption{Controllore di volo Pixhawk 4.}
+    \label{fig:pixhawk}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.9\textwidth]{figs/chapter3/px4-controller.jpg}
+    \caption{Schema del controllore di volo multilivello implementato da PX4.}
+    \label{fig:px4controller}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.9\textwidth]{figs/chapter3/px4-angularcont.jpg}
+    \caption{Dettaglio del controllore di PX4 per la stabilizzazione angolare.}
+    \label{fig:px4angular}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.9\textwidth]{figs/chapter3/px4-attitude.jpg}
+    \caption{Dettaglio del controllore di PX4 per il controllo d'assetto.}
+    \label{fig:px4attitude}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.9\textwidth]{figs/chapter3/px4-velocity.jpg}
+    \caption{Dettaglio del controllore di PX4 per il controllo della velocità lineare.}
+    \label{fig:px4velocity}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.9\textwidth]{figs/chapter3/px4-position.jpg}
+    \caption{Dettaglio del controllore di PX4 per il controllo della posizione.}
+    \label{fig:px4position}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.9\textwidth]{figs/chapter3/rtps-bridge.png}
+    \caption{Architettura del link di comunicazione microRTPS Bridge.}
+    \label{fig:rtpsbridge}
+\end{figure}
+
+\newsubsection{Fotocamere}
+\indent Al fine di riconoscere i target montati sui robot mobili a terra, nonché di localizzarsi nell'ambiente, si sono rese necessarie due fotocamere, montate rispettivamente di fronte e verso il basso. La scelta è ricaduta sulle Intel RealSense D435i (Figura \ref{fig:d435i}), dotate di interfaccia USB 3.1 e vari sensori, dei quali sono stati usati le camere RGB e ad infrarossi per ricavare una mappa di profondità. L'integrazione col resto del software è stata possibile mediante dei driver open-source resi disponibili da Intel.\clearpage
+
+\begin{figure}
+    \centering
+    \includegraphics[scale=0.1]{figs/chapter3/d435i.jpg}
+    \caption{Intel RealSense D435i stereo depth camera.}
+    \label{fig:d435i}
+\end{figure}
+
+\newsubsection{Computer di bordo}
+\indent
 
 \newsection{Operating System}
 \indent
