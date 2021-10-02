@@ -102,7 +102,7 @@ La caratteristica saliente di questo controllore è la compatibilità con il pro
 \end{itemize}
 \vfill\newpage
 L'algoritmo di controllo nonlineare implementato da PX4 è descritto in \cite{px4control}, e una sua schematizzazione è mostrata in Figura \ref{fig:px4controller}, con dettagli nelle Figure \ref{fig:px4angular}, \ref{fig:px4attitude}, \ref{fig:px4velocity}, \ref{fig:px4position}. A ciascun livello, ogni controllore prende in ingresso un riferimento da inseguire e calcola un controllo, da applicare al livello successivo oppure direttamente ai motori tramite opportuno mixing. Ai fini del Contest, tra le modalità disponibili sono state impiegate quelle in posizione e in velocità, a seguito di uno studio accurato del sistema e di una precisa taratura dei suoi vari guadagni e saturazioni.\\
-Il sistema di comunicazione con il computer di bordo è invece costituito da un bridge tra due DDS, denominato \emph{microRTPS Bridge}, comprensivo di meccanismi di serializzazione e deserializzazione dei pacchetti in transito sul link seriale. Nello specifico, il firmware integra il DDS basico \emph{uORB}, usato anche per le varie comunicazioni interprocesso nel firmware stesso, mentre l'altro lato della comunicazione è basato su \emph{FastDDS}\footnote{https://www.eprosima.com/index.php/products-all/eprosima-fast-dds} di eProsima. Le due parti della comunicazione seriale sono gestite da due software, uno in esecuzione sul controllore di volo e per questo denominato \emph{client}, ed uno presente sul computer di bordo e chiamato \emph{agent}.\\
+Il sistema di comunicazione con il computer di bordo è invece costituito da un bridge tra due DDS, denominato \emph{microRTPS Bridge}, comprensivo di meccanismi di serializzazione e deserializzazione dei pacchetti in transito sul link seriale. Nello specifico, il firmware integra il DDS basico \emph{uORB}, usato anche per le varie comunicazioni interprocesso nel firmware stesso, mentre l'altro lato della comunicazione è basato su \emph{FastDDS}\footnote{https://www.eprosima.com/index.php/products-all/eprosima-fast-dds} di eProsima. Le due parti della comunicazione seriale sono gestite da due software, uno in esecuzione sul controllore di volo e per questo denominato \emph{Client}, ed uno presente sul computer di bordo e chiamato \emph{Agent}.\\
 Tale soluzione assicura una comunicazione affidabile, full-duplex e ad alta velocità tra i due componenti, nonché la semplice integrazione con altri middleware quali ad esempio ROS 2. Anche questo progetto è open-source, ed è stato modificato in svariati punti durante questo lavoro al fine di produrre una versione migliore di quella ufficiale, nella quale sono state rilevate gravi mancanze nella gestione di eventuali pacchetti malformati, che potevano portare casualmente al crash del programma. Una schematizzazione dell'architettura di comunicazione è mostrata in Figura \ref{fig:rtpsbridge}.
 \vfill\newpage
 
@@ -206,9 +206,40 @@ T: 5 (10436) P:98 I:3500 C:    958 Min:      9 Act:   22 Avg:   24 Max:     319
 \end{lstlisting}
 
 Da tale esecuzione si evince come le latenze siano comunque contenute, in media nell'ordine delle decine di microsecondi, con dei picchi attesi data la configurazione del sistema, dipendenti dal carico ma comunque mai eccessivi.
+\clearpage
 
 \newsection{Software}
-\indent
+\indent La realizzazione di un drone autonomo in grado di eseguire deterministicamente e con precisione i task specificati nel regolamento del Contest ha posto come prima problematica la scelta di un'architettura software efficiente, e anche comoda da usare sia durante lo sviluppo che in fase di testing. Per ragioni che a questo punto dovrebbero risultare evidenti, all'installazione di Linux descritta nella sezione precedente è stato aggiunto il middleware ROS 2 versione Foxy Fitzroy.\\
+I vari task necessari al compimento di una missione sono stati suddivisi in livelli:
+\begin{itemize}
+    \item a basso livello: comunicazione con il controllore di volo Pixhawk per invio comandi, ricezione di feedback e informazioni di stato e campionamento dell'odometria;
+    \item ad un livello intermedio: comunicazione con le camere per configurarle e ricevere i frame da cui estrarre informazioni;
+    \item ad un livello più alto: algoritmi di esplorazione, navigazione e precision landing, logica decisionale e comunicazione con la Ground Control Station.
+\end{itemize}
+Naturalmente ciascuno di questi moduli è stato realizzato come package ROS 2, comprendente uno o più nodi secondo le necessità. Ciò che li differenzia è la diversa modalità operativa: i nodi appartenenti al livello più basso hanno quasi sempre callbacks in esecuzione o eventi da gestire, e fanno un uso preponderante dei messaggi; quelli appartenenti al livello intermedio svolgono lavoro non appena sono disponibili nuovi dati da processare, pubblicando i risultati sempre sotto forma di messaggi; infine, le logiche e gli algoritmi di più alto livello sono attivati solo quando richiesto, ossia in momenti specifici della missione, e sono pertanto invocati sempre mediante dei servizi. Le interfacce che si sono dovute definire ad-hoc sono state raccolte nel package \emph{afg\_interfaces}. Data la criticità di alcune operazioni, nonché la necessità di lavorare talvolta a diretto contatto con l'hardware a disposizione, l'unico linguaggio di programmazione impiegato è stato il C++. Nel resto di questa sezione si procederà dunque a descrivere nel dettaglio tutti i packages e i nodi che compongono l'architettura, secondo il naturale ordinamento gerarchico appena illustrato. Una rappresentazione complessiva di tale architettura è offerta in Figura \ref{fig:nodesgraph}: tale schema è stato ricavato con il tool rqt\_graph ed evidenzia tutti i nodi attivi sul drone e la GCS, nonché i topic su cui alcuni di essi si scambiano messaggi. Sono assenti i servizi, non rappresentabili graficamente da rqt\_graph, nonché i topic esposti dal microRTPS Agent su cui viaggiano le comunicazioni da e verso il controllore di volo: tutti questi elementi saranno illustrati più in dettaglio nel seguito, assieme a degli schemi relativi ai singoli packages.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\textwidth]{figs/chapter3/nodesgraph.png}
+    \caption{Schema complessivo di nodi e topic attivi su drone e GCS.}
+    \label{fig:nodesgraph}
+\end{figure}
+
+\newsubsection{Flight Control}
+\indent Il primo livello dell'architettura software, direttamente al di sopra del firmware PX4 in esecuzione nel controllore di volo Pixhawk, è rappresentato dal package \emph{Flight Control}. I compiti svolti da questo programma, e ripartiti tra un totale di quattro nodi, sono i seguenti:
+\begin{itemize}
+    \item invio di comandi a PX4 per l'esecuzione di operazioni relative al volo quali armamento, disarmamento, decollo e atterraggio, quando richiesto da altri nodi o da un operatore;
+    \item invio periodico a PX4 di setpoint di posizione o velocità da inseguire;
+    \item parsing delle richieste formulate dagli altri nodi per cambiare i setpoint da inviare a PX4, al fine di spostare il drone nell'ambiente;
+    \item ricezione e parsing di feedback da PX4 relativi ai comandi operativi, nonché allo stato di basso livello del drone, e degli stessi messaggi di log di PX4.
+\end{itemize}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\textwidth]{figs/chapter3/fctrl.png}
+    \caption{Schema riassuntivo di nodi e topic del package \emph{Flight Control}.}
+    \label{fig:fctrl}
+\end{figure}
 
 \newsection{Realizzazione}
 \indent
