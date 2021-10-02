@@ -226,20 +226,140 @@ Naturalmente ciascuno di questi moduli è stato realizzato come package ROS 2, c
 \end{figure}
 
 \newsubsection{Flight Control}
-\indent Il primo livello dell'architettura software, direttamente al di sopra del firmware PX4 in esecuzione nel controllore di volo Pixhawk, è rappresentato dal package \emph{Flight Control}. I compiti svolti da questo programma, e ripartiti tra un totale di quattro nodi, sono i seguenti:
+\indent Il primo livello dell'architettura software, direttamente al di sopra del firmware PX4 in esecuzione nel controllore di volo Pixhawk, è rappresentato dal package \emph{Flight Control}. I compiti svolti da questo programma possono essere riassunti come segue, e sono stati ripartiti tra un totale di quattro nodi esattamente nello stesso modo:
 \begin{itemize}
     \item invio di comandi a PX4 per l'esecuzione di operazioni relative al volo quali armamento, disarmamento, decollo e atterraggio, quando richiesto da altri nodi o da un operatore;
     \item invio periodico a PX4 di setpoint di posizione o velocità da inseguire;
     \item parsing delle richieste formulate dagli altri nodi per cambiare i setpoint da inviare a PX4, al fine di spostare il drone nell'ambiente;
     \item ricezione e parsing di feedback da PX4 relativi ai comandi operativi, nonché allo stato di basso livello del drone, e degli stessi messaggi di log di PX4.
 \end{itemize}
+Una rappresentazione completa di nodi e topic relativi a questo package è mostrata in Figura \ref{fig:fctrl}, mentre i listati seguenti riassumono la struttura di ciascuno.
+\newpage
 
-\begin{figure}
+\begin{lstlisting}[language=C++, caption=Definizione del nodo \emph{flight\_controller}.]
+class FlightController : public rclcpp::Node
+{
+public:
+    FlightController();
+
+private:
+    rclcpp::Publisher<TrajectorySetpoint>::SharedPtr traj_setpoint_pub_;
+    rclcpp::Publisher<OffboardControlMode>::SharedPtr offboard_cmode_pub_;
+    rclcpp::CallbackGroup::SharedPtr setpoints_clbk_group_;
+    rclcpp::TimerBase::SharedPtr setpoint_pub_timer_;
+
+    void setpoint_timer_clbk(void);
+};
+\end{lstlisting}
+
+\vspace{3cm}
+
+\begin{figure}[h!]
     \centering
     \includegraphics[width=\textwidth]{figs/chapter3/fctrl.png}
     \caption{Schema riassuntivo di nodi e topic del package \emph{Flight Control}.}
     \label{fig:fctrl}
 \end{figure}
+\clearpage
+
+\begin{lstlisting}[language=C++, caption=Definizione del nodo \emph{control\_server}.]
+class ControlServer : public rclcpp::Node
+{
+public:
+    ControlServer();
+
+    void arm(FlightControl::Response::SharedPtr resp) const;
+    void disarm(FlightControl::Response::SharedPtr resp) const;
+    void takeoff(FlightControl::Response::SharedPtr resp) const;
+    void land(FlightControl::Response::SharedPtr resp) const;
+    void manual_on(FlightControl::Response::SharedPtr resp) const;
+    void manual_off(FlightControl::Response::SharedPtr resp) const;
+    void setp_on(FlightControl::Response::SharedPtr resp) const;
+    void setp_off(FlightControl::Response::SharedPtr resp) const;
+    void reset(FlightControl::Response::SharedPtr resp) const;
+
+private:
+    rclcpp::Publisher<VehicleCommand>::SharedPtr vehicle_cmd_pub_;
+    rclcpp::Service<FlightControl>::SharedPtr flight_control_srv_;
+    rclcpp::CallbackGroup::SharedPtr flight_control_clbk_group_;
+
+    uint16_t publish_vehicle_cmd(uint16_t cmd,
+                                 float p1 = NAN,
+                                 float p2 = NAN,
+                                 float p3 = NAN,
+                                 float p4 = NAN,
+                                 float p5 = NAN,
+                                 float p6 = NAN,
+                                 float p7 = NAN) const;
+    void flight_control_clbk(const FlightControl::Request::SharedPtr request,
+                             const FlightControl::Response::SharedPtr response);
+};
+\end{lstlisting}
+\clearpage
+
+\begin{lstlisting}[language=C++, caption=Definizione del nodo \emph{setpoint\_server}.]
+class SetpointServer : public rclcpp::Node
+{
+public:
+    SetpointServer();
+
+    bool change_target_setpoint(uint8_t conf,
+                                float x,
+                                float y,
+                                float z,
+                                float vx,
+                                float vy,
+                                float vz,
+                                float yaw);
+
+private:
+    rclcpp::Service<SetpointSetter>::SharedPtr setpoint_set_srv_;
+    rclcpp::Subscription<ChangeSetpoint>::SharedPtr setpoint_set_sub_;
+    rclcpp::CallbackGroup::SharedPtr setpoint_msg_clbk_group_;
+    rclcpp::CallbackGroup::SharedPtr setpoint_srv_clbk_group_;
+
+    void setpoint_set_srv_clbk(const SetpointSetter::Request::SharedPtr request,
+                               const SetpointSetter::Response::SharedPtr response);
+    void setpoint_set_msg_clbk(const ChangeSetpoint::SharedPtr msg);
+};
+\end{lstlisting}
+\clearpage
+
+\begin{lstlisting}[language=C++, caption=Definizione del nodo \emph{px4\_feedback\_listener}.]
+class PX4FeedbackListener : public rclcpp::Node
+{
+public:
+    PX4FeedbackListener();
+
+private:
+    rclcpp::Subscription<VehicleCommandAck>::SharedPtr vehicle_cmd_ack_sub_;
+    rclcpp::Subscription<TakeoffStatus>::SharedPtr takeoff_status_sub_;
+    rclcpp::Subscription<BatteryStatus>::SharedPtr battery_status_sub_;
+    rclcpp::Subscription<Timesync>::SharedPtr timesync_sub_;
+    rclcpp::Subscription<LogMessage>::SharedPtr log_message_sub_;
+    rclcpp::Subscription<VehicleOdometry>::SharedPtr odometry_sub_;
+
+    rclcpp::CallbackGroup::SharedPtr vehicle_cmd_ack_clbk_group_;
+    rclcpp::CallbackGroup::SharedPtr takeoff_status_clbk_group_;
+    rclcpp::CallbackGroup::SharedPtr battery_status_clbk_group_;
+    rclcpp::CallbackGroup::SharedPtr timesync_clbk_group_;
+    rclcpp::CallbackGroup::SharedPtr log_message_clbk_group_;
+    rclcpp::CallbackGroup::SharedPtr odometry_clbk_group_;
+
+    rclcpp::Publisher<InternalError>::SharedPtr error_pub_;
+
+    rclcpp::Clock clock_ = rclcpp::Clock(RCL_STEADY_TIME);
+    rclcpp::Time low_bat_timer_ = rclcpp::Time(0, 0, RCL_STEADY_TIME);
+
+    void vehicle_cmd_ack_msg_clbk(const VehicleCommandAck::SharedPtr msg);
+    void takeoff_status_msg_clbk(const TakeoffStatus::SharedPtr msg);
+    void battery_status_msg_clbk(const BatteryStatus::SharedPtr msg);
+    void timesync_msg_clbk(const Timesync::SharedPtr msg);
+    void log_message_clbk(const LogMessage::SharedPtr msg);
+    void odometry_msg_clbk(const VehicleOdometry::SharedPtr msg);
+};
+\end{lstlisting}
+\clearpage
 
 \newsection{Realizzazione}
 \indent
