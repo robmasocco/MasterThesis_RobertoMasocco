@@ -399,5 +399,15 @@ Tutti i feedback ricevuti da PX4, assieme alle misure in tempo reale dell'odomet
 \end{itemize}
 I primi test condotti con il prototipo sono stati orientati alla verifica del funzionamento del sistema e dell'architettura fino a questo livello, dunque ad accertarsi che quanto sin qui illustrato funzionasse e che il drone si potesse far decollare, spostare ed atterrare in modo deterministico. Per una varietà di problemi tecnici sorti in varie fasi del progetto, conseguire questo obiettivo ha richiesto quattro dei sei mesi a disposizione, e le ultime criticità sono state individuate e risolte solo durante il secondo giorno di gara. È però con immensa soddisfazione che si sottolinea come, nonostante le altre numerose limitazioni strutturali e costruttive, da quel momento in poi il prototipo abbia volato in modo totalmente affidabile e preciso, senza necessità di alcun intervento umano.
 
+\newsubsection{RealSense Node}
+\indent Un altro package di fondamentale importanza per il funzionamento del sistema è quello che si occupa di configurare le due camere Intel RealSense D435i ed esporle al resto dell'architettura. Trattandosi di soluzioni naturalmente orientate all'ambito della robotica, Intel distribuisce apertamente un package ROS 2 che comprende dei driver Linux per le camere RealSense, il cui funzionamento non è sempre affidabile ma ai fini di questo progetto è stato giudicato sufficientemente buono. L'eseguibile generato a partire da tale package può essere configurato in fase di avvio, usando opportuni launch files inclusi, per creare un nodo per ogni camera collegata, configurandola opportunamente e attivando o disattivando i vari sensori. Nel caso in esame la camera frontale, denominata \emph{vslam}, è stata configurata attivando il sensore a infrarossi e quello di profondità, mentre a quella inferiore denominata \emph{aruco} è stato attivato solo il sensore RGB per ottenere delle immagini a colori di Roomba e piazzole. Il frame rate è stato impostato a 30 fps per entrambe le camere. Le immagini scattate e i dati degli altri sensori sono pubblicati dai nodi di questo package su dei topic opportunamente denominati, usando interfacce standard di ROS 2. Lo schema riassuntivo della configurazione ottenuta con le due camere è mostrato in Figura \ref{fig:cameranodes}.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.7\textwidth]{figs/chapter3/cameranodes.png}
+    \caption{Organizzazione di nodi e topic relativi alle due camere Intel RealSense.}
+    \label{fig:cameranodes}
+\end{figure}
+
 \newsection{Realizzazione}
 \indent
