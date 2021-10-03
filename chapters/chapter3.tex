@@ -409,5 +409,22 @@ I primi test condotti con il prototipo sono stati orientati alla verifica del fu
     \label{fig:cameranodes}
 \end{figure}
 
+\newsubsection{ORB\_SLAM2}
+\indent Le regole del Contest prevedono che il drone non possa volare con l'ausilio di segnale GNSS, ma debba comunque localizzarsi nell'ambiente in tempo reale. Uno dei primissimi problemi da affrontare è stato proprio scegliere ed implementare sull'architettura costruita un algoritmo sufficientemente efficiente ed accurato, che potesse fornire a PX4 una stima attendibile e regolare della posa\footnote{Per \emph{posa} s'intende una combinazione di dati che esprimono la posizione nello spazio e l'orientamento di un corpo rigido.} locale. Il filtro di Kalman EKF2 può infatti essere configurato per volare senza GPS, escludendo completamente tale modulo ed affidandosi completamente ad altri metodi di localizzazione quali la visione artificiale, ma necessita di uno stream continuo di informazioni coerenti. Confrontando diverse soluzioni disponibili ed adeguatamente documentate, la scelta è ricaduta sul sistema di VSLAM\footnote{Tale sigla sta per "Visual Simultaneous Localization And Mapping", ed indica una classe di algoritmi basati sul riconoscimento di elementi all'interno di un'immagine al fine di mappare l'ambiente circostante un robot e localizzare quest'ultimo al suo interno in tempo reale.} ORB\_SLAM2. Si tratta della seconda versione del sistema ORB\_SLAM descritto in \cite{orbslam}, le cui estensioni rispetto alla versione originale sono elencate in \cite{orbslam2}. In sintesi, ORB\_SLAM2 si basa sull'estrazione di features binarie da un frame, sulla base delle quali viene man mano costruita una mappa locale. Le stesse features sono usate ovunque nel sistema in modo da evitare conversioni e massimizzare l'efficienza. I punti principali di una mappa locale, che ne costituiscono la parte essenziale, appartengono a un ristretto sottoinsieme di frames denominati \emph{keyframes}. I frame vengono incrociati per calcolare la posa locale corrente componendo un grafo chiamato \emph{Grafo di Covisibilità}, usato sia per localizzare il sistema che per costruire in memoria una mappa dell'ambiente. Man mano che la mappa cresce viene costruito un grafo che ne riassume le caratteristiche salienti, noto come \emph{Grafo Essenziale}, grazie al quale vengono individuati i loop; all'occorrenza del rilevamento di un loop viene effettuata una \emph{chiusura}: tutti i grafi vengono riesaminati e aggiornati, i keyframes e i nodi ridondanti vengono eliminati, e la mappa locale viene corretta in base ai rilevamenti fatti in modo da ridurre al minimo gli errori e renderla il più possibile coerente con la realtà. Per i dettagli teorici dietro il funzionamento di questo sistema si rimanda sempre a \cite{orbslam}. Dal punto di vista implementativo, tutto può essere fatto in real-time dato che ciascuna delle tre fasi di tracking, local mapping e loop closing descritte poc'anzi è affidata ad uno specifico thread. La versione 2 aggiunge un quarto thread, attivato subito dopo la chiusura di un loop, il cui compito è ripercorrere l'intera mappa al fine di apportare le dovute correzioni ed eliminare le ridondanze. L'organizzazione di questi thread è riassunta in Figura \ref{fig:orbthreads}. Altri miglioramenti apportati sono stati l'aggiunta del supporto alle camere stereo, come le RealSense impiegate in questo progetto, e lo sviluppo di una modalità chiamata \emph{localizzazione}, in cui il sistema carica all'avvio una mappa salvata su file e si limita a localizzarsi al suo interno, senza tentare di ottimizzarla o estenderla. In Figura \ref{fig:orbgraphs}, a titolo d'esempio, è rappresentata la costruzione dei grafi sopracitati ed un esempio di loop closure effettuate su uno dei dataset usati per testare la prima versione del sistema.\\
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\textwidth]{figs/chapter3/orbthreads.png}
+    \caption{Organizzazione dei thread del sistema ORB\_SLAM2.}
+    \label{fig:orbthreads}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.6\textwidth]{figs/chapter3/orbgraphs.png}
+    \caption{Costruzione dei grafi mediante frames e loop closure effettuate dal sistema ORB\_SLAM su uno dei dataset di test.}
+    \label{fig:orbgraphs}
+\end{figure}
+
 \newsection{Realizzazione}
 \indent
