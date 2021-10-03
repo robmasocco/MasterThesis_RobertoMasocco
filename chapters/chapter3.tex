@@ -400,7 +400,7 @@ Tutti i feedback ricevuti da PX4, assieme alle misure in tempo reale dell'odomet
 I primi test condotti con il prototipo sono stati orientati alla verifica del funzionamento del sistema e dell'architettura fino a questo livello, dunque ad accertarsi che quanto sin qui illustrato funzionasse e che il drone si potesse far decollare, spostare ed atterrare in modo deterministico. Per una varietà di problemi tecnici sorti in varie fasi del progetto, conseguire questo obiettivo ha richiesto quattro dei sei mesi a disposizione, e le ultime criticità sono state individuate e risolte solo durante il secondo giorno di gara. È però con immensa soddisfazione che si sottolinea come, nonostante le altre numerose limitazioni strutturali e costruttive, da quel momento in poi il prototipo abbia volato in modo totalmente affidabile e preciso, senza necessità di alcun intervento umano.
 
 \newsubsection{RealSense Node}
-\indent Un altro package di fondamentale importanza per il funzionamento del sistema è quello che si occupa di configurare le due camere Intel RealSense D435i ed esporle al resto dell'architettura. Trattandosi di soluzioni naturalmente orientate all'ambito della robotica, Intel distribuisce apertamente un package ROS 2 che comprende dei driver Linux per le camere RealSense, il cui funzionamento non è sempre affidabile ma ai fini di questo progetto è stato giudicato sufficientemente buono. L'eseguibile generato a partire da tale package può essere configurato in fase di avvio, usando opportuni launch files inclusi, per creare un nodo per ogni camera collegata, configurandola opportunamente e attivando o disattivando i vari sensori. Nel caso in esame la camera frontale, denominata \emph{vslam}, è stata configurata attivando il sensore a infrarossi e quello di profondità, mentre a quella inferiore denominata \emph{aruco} è stato attivato solo il sensore RGB per ottenere delle immagini a colori di Roomba e piazzole. Il frame rate è stato impostato a 30 fps per entrambe le camere. Le immagini scattate e i dati degli altri sensori sono pubblicati dai nodi di questo package su dei topic opportunamente denominati, usando interfacce standard di ROS 2. Lo schema riassuntivo della configurazione ottenuta con le due camere è mostrato in Figura \ref{fig:cameranodes}.
+\indent Un altro package di fondamentale importanza per il funzionamento del sistema è quello che si occupa di configurare le due camere Intel RealSense D435i ed esporle al resto dell'architettura. Trattandosi di soluzioni naturalmente orientate all'ambito della robotica, Intel distribuisce apertamente un package ROS 2 che comprende dei driver Linux per le camere RealSense, il cui funzionamento non è sempre affidabile ma ai fini di questo progetto è stato giudicato sufficientemente buono. L'eseguibile generato a partire da tale package può essere configurato in fase di avvio, usando opportuni launch files inclusi, per creare un nodo per ogni camera collegata, configurandola opportunamente e attivando o disattivando i vari sensori. Nel caso in esame la camera frontale, denominata \emph{vslam}, è stata configurata attivando il sensore a infrarossi e quello di profondità, mentre a quella inferiore denominata \emph{aruco} è stato attivato solo il sensore RGB per ottenere delle immagini a colori di Roomba e piazzole. Il frame rate è stato impostato a 30 fps per entrambe le camere. Le immagini scattate e i dati degli altri sensori sono pubblicati dai nodi di questo package su dei topic opportunamente denominati, usando interfacce standard di ROS 2 e una policy di QoS best-effort. Lo schema riassuntivo della configurazione ottenuta con le due camere è mostrato in Figura \ref{fig:cameranodes}.
 
 \begin{figure}
     \centering
@@ -536,8 +536,64 @@ private:
 };
 \end{lstlisting}
 
-Facendo riferimento al Listing \ref{lst:imgrabber}, si nota come tutto abbia inizio entro il nodo \emph{image\_grabber}: esso si sottoscrive ai topic della camera \emph{vslam} su cui vengono pubblicate le immagini a infrarossi e la mappa di profondità. Per farlo, usa una funzionalità di ROS nota come \emph{message filter}: i due stream sono temporalmente sfasati tra loro, nonostante i due campioni pubblicati a poca distanza siano stati acquisiti nello stesso istante; il message filter applicato sui due topic bufferizza quello che arriva prima, ritardando la pubblicazione a quando anche l'altro è disponibile. Successivamente i campioni vengono processati per generare una posa locale attraverso una chiamata al metodo \emph{setPose} del nodo \emph{orbslam2\_node}. Al termine di queste operazioni, se la corrispondente feature è abilitata, viene postato un messaggio sul topic \emph{/CameraSampling}, del quale si può misurare il rate di pubblicazione al fine di stimare le performance del sistema ORB\_SLAM2 in tempo reale.\\
+Facendo riferimento al Listing \ref{lst:imgrabber}, si nota come tutto abbia inizio entro il nodo \emph{image\_grabber}: esso si sottoscrive ai topic della camera \emph{vslam} su cui vengono pubblicate le immagini a infrarossi e la mappa di profondità. Per farlo, usa una funzionalità di ROS nota come \emph{message filter}: i due stream sono temporalmente sfasati tra loro, nonostante i due campioni pubblicati a poca distanza siano stati acquisiti nello stesso istante; il message filter applicato sui due topic bufferizza quello che arriva prima, ritardando la pubblicazione a quando anche l'altro è disponibile. Questa implementazione inoltre riduce a 1 la dimensione della coda di messaggi provenienti dalle camere, per evitare di processare campioni vecchi. Successivamente i campioni vengono processati per generare una posa locale attraverso una chiamata al metodo \emph{setPose} del nodo \emph{orbslam2\_node}. Al termine di queste operazioni, se la corrispondente feature è abilitata, viene postato un messaggio sul topic \emph{/CameraSampling}, del quale si può misurare il rate di pubblicazione al fine di stimare le performance del sistema ORB\_SLAM2 in tempo reale.\\
 Il nodo \emph{orbslam2\_node} è composto praticamente solo da un timer, alle cui occorrenze viene invocata una callback che legge l'ultima posa calcolata dal sistema e compone un messaggio da postare verso PX4 sul topic \emph{/VehicleVisualOdometry}. Nel far questo, la posa viene ruotata per compensare l'inclinazione della camera e trasformata dal sistema di riferimento di ORB\_SLAM2 a quello "mondo" di PX4, che è NED\footnote{North-East-Down, ossia X in avanti, Y verso destra e Z verso il basso.}. Viene inoltre applicata una traslazione delle coordinate basata sulla piazzola di partenza, in quanto ORB\_SLAM2 pone lo zero nel punto di accensione mentre il resto del software, come si vedrà, presuppone che l'origine delle coordinate sia in un punto fisso del campo. L'uso del timer è sostanzialmente un refuso delle precedenti versioni basate su localizzazione, dove era utile per decidere quando far intervenire gli estrapolatori, mentre ora consente soltanto di fissare il rate di pubblicazione. Il messaggio postato verso PX4 consta essenzialmente di coordinate NED X, Y, Z, un quaternione d'orientamento ed un timestamp. Opzionalmente, alle tre coordinate spaziali può essere applicato il filtro numerico menzionato precedentemente, il cui funzionamento può essere riassunto così: TODO.
+
+\newsubsection{Aruco Scanner}
+\indent Le immagini RGB provenienti dalla camera inferiore sono necessarie per individuare i robot sconosciuti, acquisire la sequenza dei punteggi ed individuare le piazzole di atterraggio. Il processamento di queste immagini è affidato al nodo \emph{aruco\_scanner}, la cui struttura è descritta nel Listing \ref{lst:ascan} e illustrata in Figura \ref{fig:ascan}. Il suo eseguibile va avviato fornendo gli ID dei robot conosciuti e la distanza focale, in pixel, della camera. Tutto il lavoro compiuto da questo nodo è codificato nella callback \emph{down\_camera\_clbk}, che acquisisce con un'apposita policy di QoS l'ultima immagine scattata dalla camera e la elabora al fine di trovare eventuali landmark ArUco presenti in essa. Per questo task è stata impiegata la libreria OpenCV, compilata per architettura CUDA in modo da far uso anche in questo contesto della GPU. Se nell'immagine è presente un landmark, la callback ha due modalità di funzionamento:
+\begin{itemize}
+    \item se alla ricerca di un robot, ed il landmark rilevato non è tra quelli noti, viene salvata in locale la foto scattata e inviato un messaggio d'allerta alla logica di navigazione sul topic \emph{/NavigatorAlert};
+    \item se in navigazione verso una piazzola d'atterraggio o durante un precision landing, viene calcolato un vettore d'errore di posizionamento rispetto al centro della piazzola nel sistema di riferimento NED solidale al drone, le cui componenti vengono poi postate assieme all'ID della piazzola sul topic \emph{/ArucoErrors} ed eventualmente su \emph{/LandError} per finalità di testing.
+\end{itemize}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.7\textwidth]{figs/chapter3/ascan.png}
+    \caption{Organizzazione del nodo \emph{aruco\_scanner}.}
+    \label{fig:ascan}
+\end{figure}
+
+Il calcolo dell'errore di posizionamento rispetto al centro della piazzola viene effettuato in metri, sapendo l'altitudine grazie all'odometria postata da PX4, la distanza focale della camera, la dimensione del landmark a terra ed una sua eventuale elevazione rispetto al suolo.
+\clearpage
+
+\begin{lstlisting}[language=C++, caption={Definizione del nodo \emph{aruco\_scanner}.}, label={lst:ascan}]
+class ArucoScanner : public rclcpp::Node
+{
+public:
+    ArucoScanner(bool calibrate,
+                 float calib_hgt,
+                 float focal_len,
+                 std::vector<int> ids_good);
+
+private:
+    rclcpp::Publisher<ArucoDataVector>::SharedPtr error_vector_pub_;
+    rclcpp::Publisher<Float32>::SharedPtr focal_len_pub_;
+    rclcpp::Publisher<Bool>::SharedPtr stop_pub_;
+
+    rclcpp::Subscription<VehicleOdometry>::SharedPtr odometry_sub_;
+    rclcpp::Subscription<Image>::SharedPtr down_camera_sub_;
+
+    rclcpp::CallbackGroup::SharedPtr camera_clbk_group_;
+    rclcpp::CallbackGroup::SharedPtr odometry_clbk_group_;
+
+    bool calibrating_;
+    float calibration_hgt_;
+    float focal_len_;
+    std::atomic<float> drone_z_;
+    std::vector<int> ids_good_;
+    int pics_count_;
+
+    cv::Ptr<cv::aruco::Dictionary> aruco_dictionary_;
+    cv_bridge::CvImagePtr cv_ptr_;
+    cv::Mat image_copy_;
+    std::vector<int> ids_;
+    std::vector<std::vector<cv::Point2f>> corners_;
+
+    void odometry_msg_clbk(const VehicleOdometry::SharedPtr msg);
+    void down_camera_clbk(const Image::SharedPtr msg);
+};
+\end{lstlisting}
+\clearpage
 
 \newsection{Realizzazione}
 \indent
