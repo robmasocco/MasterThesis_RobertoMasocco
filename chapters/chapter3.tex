@@ -216,9 +216,9 @@ I vari task necessari al compimento di una missione sono stati suddivisi in live
     \item ad un livello intermedio: comunicazione con le camere per configurarle e ricevere i frame da cui estrarre informazioni;
     \item ad un livello più alto: algoritmi di esplorazione, navigazione e precision landing, logica decisionale e comunicazione con la Ground Control Station.
 \end{itemize}
-Naturalmente ciascuno di questi moduli è stato realizzato come package ROS 2, comprendente uno o più nodi secondo le necessità. Ciò che li differenzia è la diversa modalità operativa: i nodi appartenenti al livello più basso hanno quasi sempre callbacks in esecuzione o eventi da gestire, e fanno un uso quasi esclusivo dei messaggi; quelli appartenenti al livello intermedio svolgono lavoro non appena sono disponibili nuovi dati da processare, pubblicando i risultati sempre sotto forma di messaggi; infine, le logiche e gli algoritmi di più alto livello sono attivati solo quando richiesto, ossia in momenti specifici della missione, e sono pertanto invocati sempre mediante dei servizi. Le interfacce che si è dovuto definire ad-hoc sono state raccolte nel package \emph{afg\_interfaces}. Data la criticità di alcune operazioni, nonché la necessità di lavorare talvolta a diretto contatto con l'hardware a disposizione, l'unico linguaggio di programmazione impiegato è stato il C++. Nel resto di questa sezione si procederà dunque a descrivere nel dettaglio tutti i packages e i nodi che compongono l'architettura, secondo il naturale ordinamento gerarchico appena illustrato. Una rappresentazione complessiva di tale architettura è offerta in Figura \ref{fig:nodesgraph}: lo schema è stato ricavato con il tool rqt\_graph\footnote{Questo tool talvolta non esclude alcuni elementi interni al middleware dai diagrammi, dunque si avvisa che in alcuni di essi potrebbero figurare nodi o topic propri di ROS 2 o RQt stesso.} ed evidenzia tutti i nodi attivi sul drone e la GCS, nonché i topic su cui alcuni di essi si scambiano messaggi. Sono assenti i servizi, non rappresentabili graficamente da rqt\_graph, nonché i topic esposti dal microRTPS Agent su cui viaggiano le comunicazioni da e verso il controllore di volo: tutti questi elementi saranno illustrati più chiaramente nel seguito, mediante degli schemi relativi ai singoli packages.\\
-Ciascuno dei moduli software che compongono questa architettura offre, sia all'operatore che agli altri moduli, un set di comandi generalmente invocabili mediante richieste ad opportuni servizi. Per testare singolarmente le varie unità prima di arrivare al compimento di intere missioni sotto il controllo della logica di supervisione, sono stati redatti svariati alias e funzioni per la shell Bash al fine di semplificare l'impiego dei comandi del middleware nei vari casi; un esempio è mostrato nel Listing \ref{lst:fcsetp}.
-\newpage
+Ciascuno di questi moduli è stato realizzato come package ROS 2, comprendente uno o più nodi secondo le necessità. Ciò che li differenzia è la diversa modalità operativa: i nodi appartenenti al livello più basso hanno quasi sempre callbacks in esecuzione o eventi da gestire, e fanno un uso quasi esclusivo dei messaggi; quelli appartenenti al livello intermedio svolgono lavoro non appena sono disponibili nuovi dati da processare, pubblicando i risultati sempre sotto forma di messaggi; infine, le logiche e gli algoritmi di più alto livello sono attivati solo quando richiesto, ossia in momenti specifici della missione, e sono pertanto invocati sempre mediante dei servizi. Le interfacce che si è dovuto definire ad-hoc sono state raccolte nel package \emph{afg\_interfaces}, mentre quelle proprie di PX4 si possono trovare nel package \emph{px4\_msgs}\footnote{https://github.com/PX4/px4\_msgs}. L'implementazione corretta del microRTPS Bridge è stata raccolta in un fork del package \emph{px4\_ros\_com}\footnote{https://github.com/Automazione-Tor-Vergata/px4\_ros\_com}. Data la criticità di alcune operazioni, nonché la necessità di lavorare talvolta a diretto contatto con l'hardware a disposizione, l'unico linguaggio di programmazione impiegato è stato il C++. Nel resto di questa sezione si procederà dunque a descrivere nel dettaglio tutti i packages e i nodi che compongono l'architettura, secondo il naturale ordinamento gerarchico appena illustrato. Una rappresentazione complessiva di tale architettura è offerta in Figura \ref{fig:nodesgraph}: lo schema è stato ricavato con il tool rqt\_graph\footnote{Questo tool talvolta non esclude alcuni elementi interni al middleware dai diagrammi, dunque in alcuni di essi figureranno nodi o topic propri di ROS 2 o RQt stesso.} ed evidenzia tutti i nodi attivi sul drone e la GCS, nonché i topic su cui alcuni di essi si scambiano messaggi. Sono assenti i servizi, non rappresentabili graficamente dal tool, nonché i topic esposti dal microRTPS Agent su cui viaggiano le comunicazioni da e verso il controllore di volo: tutti questi elementi saranno illustrati più chiaramente nel seguito.\\
+Ciascuno dei moduli che compongono questa architettura offre, sia all'operatore che agli altri moduli, un set di comandi invocabili mediante richieste ad opportuni servizi. Per testare singolarmente le varie unità senza il controllo della logica di supervisione, sono stati redatti svariati alias e funzioni per la shell Bash al fine di semplificare l'impiego dei comandi del middleware nei vari casi; un esempio è mostrato nel Listing \ref{lst:fcsetp}.
+\vfill\newpage
 
 \begin{figure}
     \centering
@@ -411,6 +411,9 @@ I primi test condotti con il prototipo sono stati orientati alla verifica del fu
 
 \newsubsection{ORB\_SLAM2}
 \indent Le regole del Contest prevedono che il drone non possa volare con l'ausilio di segnale GNSS, ma debba comunque localizzarsi nell'ambiente in tempo reale. Uno dei primissimi problemi da affrontare è stato proprio scegliere ed implementare sull'architettura costruita un algoritmo sufficientemente efficiente ed accurato, che potesse fornire a PX4 una stima attendibile e regolare della posa\footnote{Per \emph{posa} s'intende una combinazione di dati che esprimono la posizione nello spazio e l'orientamento di un corpo rigido.} locale. Il filtro di Kalman EKF2 può infatti essere configurato per volare senza GPS, escludendo completamente tale modulo ed affidandosi completamente ad altri metodi di localizzazione quali la visione artificiale, ma necessita di uno stream continuo di informazioni coerenti. Confrontando diverse soluzioni disponibili ed adeguatamente documentate, la scelta è ricaduta sul sistema di VSLAM\footnote{Tale sigla sta per "Visual Simultaneous Localization And Mapping", ed indica una classe di algoritmi basati sul riconoscimento di elementi all'interno di un'immagine al fine di mappare l'ambiente circostante un robot e localizzare quest'ultimo al suo interno in tempo reale.} ORB\_SLAM2. Si tratta della seconda versione del sistema ORB\_SLAM descritto in \cite{orbslam}, le cui estensioni rispetto alla versione originale sono elencate in \cite{orbslam2}. In sintesi, ORB\_SLAM2 si basa sull'estrazione di features binarie da un frame, sulla base delle quali viene man mano costruita una mappa locale. Le stesse features sono usate ovunque nel sistema in modo da evitare conversioni e massimizzare l'efficienza. I punti principali di una mappa locale, che ne costituiscono la parte essenziale, appartengono a un ristretto sottoinsieme di frames denominati \emph{keyframes}. I frame vengono incrociati per calcolare la posa locale corrente componendo un grafo chiamato \emph{Grafo di Covisibilità}, usato sia per localizzare il sistema che per costruire in memoria una mappa dell'ambiente. Man mano che la mappa cresce viene costruito un grafo che ne riassume le caratteristiche salienti, noto come \emph{Grafo Essenziale}, grazie al quale vengono individuati i loop; all'occorrenza del rilevamento di un loop viene effettuata una \emph{chiusura}: tutti i grafi vengono riesaminati e aggiornati, i keyframes e i nodi ridondanti vengono eliminati, e la mappa locale viene corretta in base ai rilevamenti fatti in modo da ridurre al minimo gli errori e renderla il più possibile coerente con la realtà. Per i dettagli teorici dietro il funzionamento di questo sistema si rimanda sempre a \cite{orbslam}. Dal punto di vista implementativo, tutto può essere fatto in real-time dato che ciascuna delle tre fasi di tracking, local mapping e loop closing descritte poc'anzi è affidata ad uno specifico thread. La versione 2 aggiunge un quarto thread, attivato subito dopo la chiusura di un loop, il cui compito è ripercorrere l'intera mappa al fine di apportare le dovute correzioni ed eliminare le ridondanze. L'organizzazione di questi thread è riassunta in Figura \ref{fig:orbthreads}. Altri miglioramenti apportati sono stati l'aggiunta del supporto alle camere stereo, come le RealSense impiegate in questo progetto, e lo sviluppo di una modalità chiamata \emph{localizzazione}, in cui il sistema carica all'avvio una mappa salvata su file e si limita a localizzarsi al suo interno, senza tentare di ottimizzarla o estenderla. In Figura \ref{fig:orbgraphs}, a titolo d'esempio, è rappresentata la costruzione dei grafi sopracitati ed un esempio di loop closure effettuate su uno dei dataset usati per testare la prima versione del sistema.\\
+L'impiego di ORB\_SLAM2 si è dimostrato inizialmente problematico. Nonostante l'implementazione fornita di base dagli autori funzioni bene, si rileva facilmente da un'ispezione del codice e degli ottimizzatori di terze parti cui si appoggia come sia fortemente legata all'architettura x86, soprattutto in alcuni punti relativi all'estrazione ed elaborazione delle features, eseguite con istruzioni vettoriali AVX/SSE. Il passaggio all'architettura ARM ha richiesto di disabilitare queste ottimizzazioni, dato che l'alternativa sarebbe stata riscrivere i punti corrispondenti usando le istruzioni vettoriali NEON, cosa impossibile visti i tempi a disposizione. Si è invece apportato un miglioramento riscrivendo alcune parti del sistema per far uso della GPU montata sulla Jetson NX, attraverso istruzioni per l'architettura CUDA e l'uso della toolchain basata sul compilatore NVCC, e sfruttando al massimo le ottimizzazioni della toolchain GCC in fase di compilazione della libreria. Nonostante tutto, le performance ottenute sono complessivamente solo accettabili, ed un ulteriore lavoro di porting sarà necessario per costruire un'implementazione per ARM che possa considerarsi efficiente al pari della controparte x86. Questo parte è stato curata a più riprese in collaborazione con l'Ing. Fabrizio Romanelli, cui si devono anche altri sostanziali miglioramenti alla codebase di ORB\_SLAM2 relativi alla gestione della mappa, nonché una esaustiva spiegazione del funzionamento e delle modalità d'uso di questo sistema assieme alle camere RealSense.\\
+Dato che l'esito di un qualunque volo dipende dal funzionamento di questo sistema, sono state tentate varie strade per trovare il modo migliore di utilizzarlo. Inizialmente è stata percorsa la strada della localizzazione: si è acquisita una mappa del campo gara, contenuta in un file grande un centinaio di MB, e la si è ricaricata a runtime sul drone al fine di fargliela usare per localizzarsi. Questo approccio ha avuto fin da subito due grossi problemi: nonostante la precisione con cui la mappa poteva essere acquisita, ci sarebbero sempre stati dei punti in cui il drone avrebbe fatto fatica a localizzarsi poiché poveri di features, e in tale modalità il sistema non ne avrebbe cercate di nuove; inoltre, dovendo processare in tempo reale una mappa globale di grandi dimensioni, la scarsa ottimizzazione per CPU ARM si faceva sentire sotto forma di rate di campionamento molto bassi, nell'ordine di 8-10 Hz, mentre si è sperimentato che PX4 richiede dati di posa a non meno di 16 Hz. A quest'ultima criticità si è tentato di far fronte implementando degli estrapolatori, dapprima quadratici e poi lineari, al fine di predire un campione in più da un buffer circolare di lunghezza fissa. Nonostante il drone fosse così in grado di volare abbastanza bene, la suscettibilità del sistema di localizzazione su mappa alle variazioni delle condizioni di luce hanno fatto optare per un ritorno al volo in SLAM puro. In questa modalità, tarando opportunamente il numero massimo di features da estrarre da un'immagine, è stato possibile ottenere rate di campionamento stabili e anche superiori ai 20 Hz; dopo aver riscontrato quale fosse il carico del resto del software, il numero massimo di features ottimale è stato individuato in 600 contro le 1000 di base, corrispondente ad un rate di circa 20 Hz a pieno carico. È stato necessario ridurre così tanto questo valore anche perché un rate di campionamento instabile corrisponde a dei frame spazialmente troppo distanti, dai quali si è riscontrato che il sistema estrae senza volerlo delle misure errate, con errori anche di svariate decine di centimetri che non è poi più in grado di correggere. Infine si è osservato che i tetti degli ostacoli del campo erano costruiti con un materiale traslucido, che causava riflessi nelle immagini visti come elementi in movimento assieme al drone, il quale tendeva dunque a correggere spostamenti che di fatto non aveva eseguito; la soluzione per ridurre questo effetto è stata montare la camera frontale su un supporto inclinato di 26.6° di pitch verso il basso. Così facendo si è ottenuto un sistema molto performante e preciso, reso ancora più affidabile dall'aggiunta di un filtro sulle misure di X, Y e Z che ne attenuasse le variazioni e ritardasse le correzioni apportate dal drone in caso di campioni spuri.\\
+Il sistema ORB\_SLAM2 è usato attraverso il package ROS 2 \emph{orbslam2}, scritto sempre in collaborazione con l'Ing. Romanelli e composto da due nodi in esecuzione su un singolo thread, denominati rispettivamente \emph{image\_grabber} ed \emph{orbslam2\_node}. I listati seguenti ne illustrano la struttura, mentre nelle Figure \ref{fig:imgrabber} e \ref{fig:orb2node} è riportato un loro schema riassuntivo dal punto di vista del middleware.
 
 \begin{figure}
     \centering
@@ -425,6 +428,116 @@ I primi test condotti con il prototipo sono stati orientati alla verifica del fu
     \caption{Costruzione dei grafi mediante frames e loop closure effettuate dal sistema ORB\_SLAM su uno dei dataset di test.}
     \label{fig:orbgraphs}
 \end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.7\textwidth]{figs/chapter3/imagegrabber.png}
+    \caption{Organizzazione del nodo \emph{image\_grabber}.}
+    \label{fig:imgrabber}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.7\textwidth]{figs/chapter3/orbslam2node.png}
+    \caption{Organizzazione del nodo \emph{orbslam2\_node}.}
+    \label{fig:orb2node}
+\end{figure}
+
+\begin{lstlisting}[language=C++, caption={Definizione del nodo \emph{orbslam2\_node}.}, label={lst:orb2node}]
+class ORBSLAM2Node : public rclcpp::Node
+{
+public:
+    ORBSLAM2Node(ORB_SLAM2::System *pSLAM,
+                 ORB_SLAM2::System::eSensor _sensorType,
+                 float camera_pitch,
+                 int start_pad,
+                 bool filter);
+
+    void setPose(cv::Mat _pose);
+    void setState(int32_t _state);
+
+private:
+    rclcpp::CallbackGroup::SharedPtr vio_clbk_group_;
+    rclcpp::TimerBase::SharedPtr vio_timer_;
+    rclcpp::Publisher<Int32>::SharedPtr state_publisher_;
+
+    std::mutex poseMtx;
+    std::mutex stateMtx;
+
+    ORB_SLAM2::System *mpSLAM;
+    ORB_SLAM2::System::eSensor sensorType;
+    int32_t orbslam2State = ORB_SLAM2::Tracking::eTrackingState::SYSTEM_NOT_READY;
+
+    cv::Mat orbslam2Pose = cv::Mat::eye(4, 4, CV_32F);
+    float camera_pitch_;
+    float cp_sin_, cp_cos_;
+    int start_pad_;
+    float x_offset_, y_offset_, z_offset_;
+    bool filter_;
+
+    const float a_0_ = 0.239018f;
+    const float a_1_ = -0.7379f;
+    const float b_0_ = 0.19080f;
+    const float b_1_ = 0.31028f;
+    const float tau_dynamic_thresh_[3] = {0.5f, 0.7f, 0.2f};
+    const float tau_thresh_min_[3] = {0.1f, 0.1f, 0.08f};
+    const float tau_dynamic_min_ = 0.1f;
+    const float tau_dynamic_slow_ = 0.98f;
+
+    float y_filtered_old_[3] = {0.0f, 0.0f, 0.0f};
+    float y_filtered_old_old_[3] = {0.0f, 0.0f, 0.0f};
+    float orb_data_old_[3] = {0.0f, 0.0f, 0.0f};
+    float orb_data_old_old_[3] = {0.0f, 0.0f, 0.0f};
+    float y_timevariant_old_[3] = {0.0f, 0.0f, 0.0f};
+    float tau_dynamic_[3] = {0.0f, 0.0f, 0.0f};
+    float orb_buffer_[3][8];
+
+    void timer_vio_callback(void);
+
+    void timestamp_callback(const Timesync::SharedPtr msg);
+
+    float orb_filter(float sample, int axis);
+
+    std::atomic<uint64_t> timestamp_;
+    rclcpp::CallbackGroup::SharedPtr timestamp_clbk_group_;
+    rclcpp::Publisher<VehicleVisualOdometry>::SharedPtr vio_publisher_;
+    rclcpp::Subscription<Timesync>::SharedPtr ts_sub_;
+};
+\end{lstlisting}
+\clearpage
+
+\begin{lstlisting}[language=C++, caption={Definizione del nodo \emph{image\_grabber}.}, label={lst:imgrabber}]
+typedef message_filters::sync_policies::ApproximateTime<Image, Image> sync_pol;
+
+class ImageGrabber : public rclcpp::Node
+{
+public:
+    ImageGrabber(ORB_SLAM2::System *pSLAM,
+                 std::shared_ptr<ORBSLAM2Node> pORBSLAM2Node,
+                 ORB_SLAM2::System::eSensor sensorType,
+                 bool irDepth);
+
+    void GrabRGBD(const Image::SharedPtr &msgRGB,
+                  const Image::SharedPtr &msgD);
+    void GrabStereo(const Image::SharedPtr &msgLeft,
+                    const Image::SharedPtr &msgRight);
+
+    ORB_SLAM2::System *mpSLAM;
+    std::shared_ptr<ORBSLAM2Node> mpORBSLAM2Node;
+
+private:
+    message_filters::Subscriber<Image> stream1_sub_;
+    message_filters::Subscriber<Image> stream2_sub_;
+    std::shared_ptr<message_filters::Synchronizer<sync_pol>> sync_;
+
+#ifdef BENCHMARK
+    rclcpp::Publisher<Bool>::SharedPtr sampling_publisher_;
+#endif
+};
+\end{lstlisting}
+
+Facendo riferimento al Listing \ref{lst:imgrabber}, si nota come tutto abbia inizio entro il nodo \emph{image\_grabber}: esso si sottoscrive ai topic della camera \emph{vslam} su cui vengono pubblicate le immagini a infrarossi e la mappa di profondità. Per farlo, usa una funzionalità di ROS nota come \emph{message filter}: i due stream sono temporalmente sfasati tra loro, nonostante i due campioni pubblicati a poca distanza siano stati acquisiti nello stesso istante; il message filter applicato sui due topic bufferizza quello che arriva prima, ritardando la pubblicazione a quando anche l'altro è disponibile. Successivamente i campioni vengono processati per generare una posa locale attraverso una chiamata al metodo \emph{setPose} del nodo \emph{orbslam2\_node}. Al termine di queste operazioni, se la corrispondente feature è abilitata, viene postato un messaggio sul topic \emph{/CameraSampling}, del quale si può misurare il rate di pubblicazione al fine di stimare le performance del sistema ORB\_SLAM2 in tempo reale.\\
+Il nodo \emph{orbslam2\_node} è composto praticamente solo da un timer, alle cui occorrenze viene invocata una callback che legge l'ultima posa calcolata dal sistema e compone un messaggio da postare verso PX4 sul topic \emph{/VehicleVisualOdometry}. Nel far questo, la posa viene ruotata per compensare l'inclinazione della camera e trasformata dal sistema di riferimento di ORB\_SLAM2 a quello "mondo" di PX4, che è NED\footnote{North-East-Down, ossia X in avanti, Y verso destra e Z verso il basso.}. Viene inoltre applicata una traslazione delle coordinate basata sulla piazzola di partenza, in quanto ORB\_SLAM2 pone lo zero nel punto di accensione mentre il resto del software, come si vedrà, presuppone che l'origine delle coordinate sia in un punto fisso del campo. L'uso del timer è sostanzialmente un refuso delle precedenti versioni basate su localizzazione, dove era utile per decidere quando far intervenire gli estrapolatori, mentre ora consente soltanto di fissare il rate di pubblicazione. Il messaggio postato verso PX4 consta essenzialmente di coordinate NED X, Y, Z, un quaternione d'orientamento ed un timestamp. Opzionalmente, alle tre coordinate spaziali può essere applicato il filtro numerico menzionato precedentemente, il cui funzionamento può essere riassunto così: TODO.
 
 \newsection{Realizzazione}
 \indent
