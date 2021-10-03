@@ -216,7 +216,9 @@ I vari task necessari al compimento di una missione sono stati suddivisi in live
     \item ad un livello intermedio: comunicazione con le camere per configurarle e ricevere i frame da cui estrarre informazioni;
     \item ad un livello più alto: algoritmi di esplorazione, navigazione e precision landing, logica decisionale e comunicazione con la Ground Control Station.
 \end{itemize}
-Naturalmente ciascuno di questi moduli è stato realizzato come package ROS 2, comprendente uno o più nodi secondo le necessità. Ciò che li differenzia è la diversa modalità operativa: i nodi appartenenti al livello più basso hanno quasi sempre callbacks in esecuzione o eventi da gestire, e fanno un uso preponderante dei messaggi; quelli appartenenti al livello intermedio svolgono lavoro non appena sono disponibili nuovi dati da processare, pubblicando i risultati sempre sotto forma di messaggi; infine, le logiche e gli algoritmi di più alto livello sono attivati solo quando richiesto, ossia in momenti specifici della missione, e sono pertanto invocati sempre mediante dei servizi. Le interfacce che si sono dovute definire ad-hoc sono state raccolte nel package \emph{afg\_interfaces}. Data la criticità di alcune operazioni, nonché la necessità di lavorare talvolta a diretto contatto con l'hardware a disposizione, l'unico linguaggio di programmazione impiegato è stato il C++. Nel resto di questa sezione si procederà dunque a descrivere nel dettaglio tutti i packages e i nodi che compongono l'architettura, secondo il naturale ordinamento gerarchico appena illustrato. Una rappresentazione complessiva di tale architettura è offerta in Figura \ref{fig:nodesgraph}: tale schema è stato ricavato con il tool rqt\_graph\footnote{Questo tool talvolta non esclude alcuni elementi interni al middleware dai diagrammi, dunque si avvisa che in alcuni dei seguenti potrebbero figurare nodi o topic propri di ROS 2 o RQt stesso.} ed evidenzia tutti i nodi attivi sul drone e la GCS, nonché i topic su cui alcuni di essi si scambiano messaggi. Sono assenti i servizi, non rappresentabili graficamente da rqt\_graph, nonché i topic esposti dal microRTPS Agent su cui viaggiano le comunicazioni da e verso il controllore di volo: tutti questi elementi saranno illustrati più in dettaglio nel seguito, assieme a degli schemi relativi ai singoli packages.
+Naturalmente ciascuno di questi moduli è stato realizzato come package ROS 2, comprendente uno o più nodi secondo le necessità. Ciò che li differenzia è la diversa modalità operativa: i nodi appartenenti al livello più basso hanno quasi sempre callbacks in esecuzione o eventi da gestire, e fanno un uso quasi esclusivo dei messaggi; quelli appartenenti al livello intermedio svolgono lavoro non appena sono disponibili nuovi dati da processare, pubblicando i risultati sempre sotto forma di messaggi; infine, le logiche e gli algoritmi di più alto livello sono attivati solo quando richiesto, ossia in momenti specifici della missione, e sono pertanto invocati sempre mediante dei servizi. Le interfacce che si è dovuto definire ad-hoc sono state raccolte nel package \emph{afg\_interfaces}. Data la criticità di alcune operazioni, nonché la necessità di lavorare talvolta a diretto contatto con l'hardware a disposizione, l'unico linguaggio di programmazione impiegato è stato il C++. Nel resto di questa sezione si procederà dunque a descrivere nel dettaglio tutti i packages e i nodi che compongono l'architettura, secondo il naturale ordinamento gerarchico appena illustrato. Una rappresentazione complessiva di tale architettura è offerta in Figura \ref{fig:nodesgraph}: lo schema è stato ricavato con il tool rqt\_graph\footnote{Questo tool talvolta non esclude alcuni elementi interni al middleware dai diagrammi, dunque si avvisa che in alcuni di essi potrebbero figurare nodi o topic propri di ROS 2 o RQt stesso.} ed evidenzia tutti i nodi attivi sul drone e la GCS, nonché i topic su cui alcuni di essi si scambiano messaggi. Sono assenti i servizi, non rappresentabili graficamente da rqt\_graph, nonché i topic esposti dal microRTPS Agent su cui viaggiano le comunicazioni da e verso il controllore di volo: tutti questi elementi saranno illustrati più chiaramente nel seguito, mediante degli schemi relativi ai singoli packages.\\
+Ciascuno dei moduli software che compongono questa architettura offre, sia all'operatore che agli altri moduli, un set di comandi generalmente invocabili mediante richieste ad opportuni servizi. Per testare singolarmente le varie unità prima di arrivare al compimento di intere missioni sotto il controllo della logica di supervisione, sono stati redatti svariati alias e funzioni per la shell Bash al fine di semplificare l'impiego dei comandi del middleware nei vari casi; un esempio è mostrato nel Listing \ref{lst:fcsetp}.
+\newpage
 
 \begin{figure}
     \centering
@@ -224,6 +226,20 @@ Naturalmente ciascuno di questi moduli è stato realizzato come package ROS 2, c
     \caption{Schema complessivo di nodi e topic attivi su drone e GCS.}
     \label{fig:nodesgraph}
 \end{figure}
+
+\begin{lstlisting}[language=bash, caption={Esempio di funzione Bash per cambiare setpoint di posizione corrente.}, label={lst:fcsetp}]
+# Routine to set a position setpoint
+function fc_setp_pos {
+    if [[ $# -ne 4 ]]; then
+        echo "Usage:" 1>&2
+        echo "    fc_setp_pos X Y Z YAW" 1>&2
+        return 1
+    fi
+    ros2init
+    ros2 service call /SetpointSetter afg_interfaces/srv/SetpointSetter\
+    "{setpoint_conf: 0, x: $1, y: $2, z: $3, yaw: $(degrad $4)}"
+}
+\end{lstlisting}
 
 \newsubsection{Flight Control}
 \indent Il primo livello dell'architettura software, direttamente al di sopra del firmware PX4 in esecuzione nel controllore di volo Pixhawk, è rappresentato dal package \emph{Flight Control}. I compiti svolti da questo programma possono essere riassunti come segue, e sono stati ripartiti tra un totale di quattro nodi esattamente nello stesso modo:
@@ -233,10 +249,10 @@ Naturalmente ciascuno di questi moduli è stato realizzato come package ROS 2, c
     \item parsing delle richieste formulate dagli altri nodi per cambiare i setpoint da inviare a PX4, al fine di spostare il drone nell'ambiente;
     \item ricezione e parsing di feedback da PX4 relativi ai comandi operativi, nonché allo stato di basso livello del drone, e degli stessi messaggi di log di PX4.
 \end{itemize}
-Una rappresentazione completa di nodi e topic relativi a questo package è mostrata in Figura \ref{fig:fctrl}, mentre i listati seguenti riassumono la struttura di ciascuno.
+Una rappresentazione completa di nodi e topic relativi a questo package è mostrata in Figura \ref{fig:fctrl}, mentre i listati seguenti espongono la struttura di ciascuno.
 \newpage
 
-\begin{lstlisting}[language=C++, caption=Definizione del nodo \emph{flight\_controller}.]
+\begin{lstlisting}[language={C++}, caption={Definizione del nodo \emph{flight\_controller}.}, label={lst:fcontroller}]
 class FlightController : public rclcpp::Node
 {
 public:
@@ -262,7 +278,7 @@ private:
 \end{figure}
 \clearpage
 
-\begin{lstlisting}[language=C++, caption=Definizione del nodo \emph{control\_server}.]
+\begin{lstlisting}[language=C++, caption={Definizione del nodo \emph{control\_server}.}, label={lst:ctrlserver}]
 class ControlServer : public rclcpp::Node
 {
 public:
@@ -297,7 +313,7 @@ private:
 \end{lstlisting}
 \clearpage
 
-\begin{lstlisting}[language=C++, caption=Definizione del nodo \emph{setpoint\_server}.]
+\begin{lstlisting}[language=C++, caption={Definizione del nodo \emph{setpoint\_server}.}, label={lst:setpserver}]
 class SetpointServer : public rclcpp::Node
 {
 public:
@@ -325,7 +341,7 @@ private:
 \end{lstlisting}
 \clearpage
 
-\begin{lstlisting}[language=C++, caption=Definizione del nodo \emph{px4\_feedback\_listener}.]
+\begin{lstlisting}[language=C++, caption={Definizione del nodo \emph{px4\_feedback\_listener}.}, label={lst:pflistener}]
 class PX4FeedbackListener : public rclcpp::Node
 {
 public:
@@ -361,7 +377,27 @@ private:
 \end{lstlisting}
 \clearpage
 
-TODO
+PX4 offre diverse modalità di volo, sia automatico che manuale; ai fini di questo lavoro quelle d'interesse sono le seguenti:
+\begin{itemize}
+    \item \textbf{MANUAL:} In questa modalità il drone è totalmente sotto il controllo del pilota, che può operare mediante un normale radiocomando la cui ricevente deve essere collegata al Pixhawk. Per questo progetto si è usato un radiocomando FrSky Taranis.
+    \item \textbf{OFFBOARD:} È la modalità di volo automatico standard, durante la quale si presuppone che il controllore di volo debba pilotare il drone in modo da eseguire dei comandi impartiti da un companion PC montato a bordo. Tali comandi sono dei setpoint di posizione nello spazio e angolo di yaw, oppure di velocità lineare e di imbardata e angolo di yaw; affinché il controllore di volo ritenga stabile la comunicazione col companion PC e non entri in failsafe, i setpoint devono essere inviati in continuazione ad un rate il più possibile stabile e superiore a 2 Hz. L'inserimento di questa modalità deve avvenire successivamente all'armamento e porta il drone a decollare verso il setpoint corrente.
+    \item \textbf{LAND:} Non appena viene inserita questa modalità, presupponendo che il drone sia in volo, viene iniziata una discesa verticale stabilizzata verso il suolo. Un modulo interno a PX4 noto come \emph{Land Detector}, e che consiste essenzialmente in una macchina a stati, si occupa di regolare la spinta e integrare le misure dell'odometria per capire quando il drone ha toccato terra e si è fermato, ossia può considerarsi atterrato.
+\end{itemize}
+Il Flight Control è stato pensato per essere una sorta di radiocomando a disposizione dei moduli di più alto livello, che consentisse di sfruttare le funzionalità sopracitate assicurando al contempo la possibilità di inserire prontamente il controllo manuale in caso di problemi. Per garantire la massima efficienza il package è stato programmato in modo concorrente, ripartendo le diverse callbacks su più thread e minimizzando l'uso di lock.\\
+Alla base di tutto vi è il nodo \emph{flight\_controller}, la cui struttura è esposta nel Listing \ref{lst:fcontroller}. Il suo compito è semplicemente quello di postare un setpoint verso PX4 sul topic \emph{/TrajectorySetpoint}, e il tipo di setpoint tra quelli prima descritti sul topic \emph{/OffboardControlMode}, mediante opportuni publishers. Tale operazione è invocata da un timer, attraverso il quale si può impostare la frequenza di pubblicazione dei setpoint che è stata fissata a 20 Hz.\\
+Il setpoint corrente può essere cambiato inviando una opportuna richiesta al nodo \emph{setpoint\_server}, descritto nel Listing \ref{lst:setpserver}. Tale nodo offre due modi per farlo: velocemente ma senza feedback sulla riuscita dell'operazione, inviando un messaggio contenente il nuovo setpoint sul topic \emph{/ChangeSetpoint}, oppure più lentamente ma con feedback formulando una richiesta al servizio \emph{/SetpointSetter}. In entrambi i casi viene invocata la routine \emph{change\_target\_setpoint}, la quale controlla la correttezza del setpoint richiesto e solo in caso positivo lo inserisce nel sistema. Il servizio \emph{/SetpointSetter} offre anche la possibilità di aggiornare il setpoint corrente con uno di posizione ed attendere che questo sia effettivamente raggiunto, eventualmente anche con l'assetto stabilizzato. Per ottenere questo effetto la callback del servizio controlla l'odometria postata da PX4, e ritorna una risposta solo quando il drone si trova entro una sfera attorno al setpoint, il cui raggio è pure specificabile nella richiesta, ha l'angolo di yaw prossimo a quello richiesto ed eventualmente quelli di roll e pitch sufficientemente limitati. Naturalmente tutte queste soglie, come un'infinità di altri parametri da cui dipende il funzionamento di questo package, sono stati definiti nel suo header file e tarati opportunamente. Sempre per massimizzare l'efficienza e consentire il raggiungimento di rate di pubblicazione anche molto elevati, i dati globali condivisi tra gli ultimi due nodi in cui sono codificati i setpoint da postare sono gestiti secondo uno schema lock-free, in cui la concorrenza è risolta mediante i tipi atomici di C++ e un uso opportuno dei \emph{memory orders} per indicare ai sottosistemi di CPU, cache e controller delle memorie quando e come eseguire le singole operazioni di lettura e scrittura ad essi relative. Tale meccanismo si è dimostrato molto efficiente ed è stato pertanto applicato più volte in situazioni simili presentatesi nel resto del software.\\
+Andando già verso un livello leggermente più alto si incontra il nodo \emph{control\_server}, illustrato nel Listing \ref{lst:ctrlserver}. Il suo compito è offrire al resto dell'architettura un modo semplice di cambiare lo stato del drone, eseguendo le operazioni di base quali armamento, disarmamento, decollo e atterraggio. L'interfaccia con l'esterno è rappresentata dal servizio \emph{/FlightControl}, mediante cui ciascuna di tali operazioni può essere eseguita formulando una opportuna richiesta; in caso d'errore, la risposta riporterà lo stesso codice d'errore ritornato da PX4. Come si evince da listato, ciascuna operazione è codificata in una specifica routine invocata selettivamente dalla callback del servizio, che si risolve sempre nella pubblicazione di un messaggio verso PX4 sul topic \emph{/VehicleCommand} costruito nella routine \emph{publish\_vehicle\_command}. Gli ACK dei vari comandi inviati, nonché lo stato dell'esecuzione delle operazioni richieste, vengono opportunamente tracciati mediante altri topic su cui pubblica PX4 ed utilizzati per capire se l'operazione ha avuto successo o meno e si può restituire una risposta. Le logiche d'invio dei comandi prevedono anche tentativi di trasmissione multipli e timeouts per far fronte ad eventuali problemi del link seriale o del microRTPS Bridge. Vi è poi tutta una serie di routine destinate ad essere invocate tramite richieste formulate da un operatore in fase di testing, quali ad esempio la configurazione del Flight Control per la selezione delle modalità di volo tramite radiocomando, l'attivazione dello stream di setpoint pubblicati verso PX4, o il reset dello stato interno del modulo.\\
+La realizzazione di quest'ultimo nodo si è resa necessaria fin da subito, in quanto anche il semplice inserimento di una modalità richiede la costruzione di un messaggio per PX4 dal formato poco intuitivo, e per controllare l'esito dell'operazione c'è bisogno di analizzare i messaggi in transito su altri topic nonché tenere traccia di quale sia inizialmente lo stato del drone stesso. Per questi motivi, e per come è codificato, il Flight Control si configura come una piccola macchina a stati finiti di limitata complessità, ma che appare all'esterno come un unico servizio con cui richiedere al controllore di volo operazioni di base formulando semplicissime richieste ROS. Costruire un modulo del genere, che rendesse semplice pilotare automaticamente il drone, è stato il primo problema ad essere affrontato e poi risolto grazie a ROS 2, ponendo le basi per il resto dell'architettura.\\
+Tutti i feedback ricevuti da PX4, assieme alle misure in tempo reale dell'odometria da esso pubblicate, sono raccolti dal nodo \emph{px4\_feedback\_listener}, illustrato nel Listing \ref{lst:pflistener}. Il nodo dispone di diversi subscribers relativi ai seguenti topic:
+\begin{itemize}
+    \item \textbf{/VehicleCommandAck:} Ogni volta che un comando operativo viene postato a PX4, l'esito dell'operazione viene scritto in uno di questi messaggi.
+    \item \textbf{/TakeoffStatus:} Le macchine a stati interne di PX4 pubblicano messaggi su questo topic ogni volta che il drone viene armato, fatto decollare, portato a terra o disarmato; questi messaggi assieme a quelli del punto precedente vengono dunque usati per capire se un decollo o un atterraggio sono andati a buon fine, attraverso un meccanismo di segnalazione tra thread basato su condition variables che coinvolge le callbacks di questi subscribers e quella del servizio /FlightControl.
+    \item \textbf{/BatteryStatus:} Da questi messaggi viene letta la tensione di batteria corrente, e se si rileva che essa si è mantenuta per un certo intervallo di tempo al di sotto di una soglia critica viene allertata la logica di livello superiore mediante un messaggio sul topic \emph{/InternalErrors}.
+    \item \textbf{/Timesync:} PX4 posta in tempo reale il valore in microsecondi del suo orologio interno, il cui zero corrisponde all'istante di accensione; questo valore è condiviso tra tutti i nodi del package in quanto va inserito in tutti i messaggi da postare verso PX4.
+    \item \textbf{/LogMessage:} PX4 integra un sistema di logging multilivello simile a quello del kernel Linux; di norma, i messaggi vengono scritti assieme agli altri dati in un log file memorizzato nel Pixhawk e che può essere scaricato al termine del volo, ma sono anche pubblicati su questo topic e dunque la relativa callback li stamperà a schermo in modo che l'operatore possa tenere traccia in tempo reale anche dell'operato e dello stato del controllore di volo.
+    \item \textbf{/VehicleOdometry:} In questi messaggi, pubblicati solitamente ad una frequenza di 100 Hz, sono scritte le misure integrate dal filtro di Kalman EKF2 relative a posizione, velocità e assetto del drone sotto forma di un quaternione di orientamento; ai fini di questo package, vengono estratti solo la posizione e i tre angoli di Eulero.
+\end{itemize}
+I primi test condotti con il prototipo sono stati orientati alla verifica del funzionamento del sistema e dell'architettura fino a questo livello, dunque ad accertarsi che quanto sin qui illustrato funzionasse e che il drone si potesse far decollare, spostare ed atterrare in modo deterministico. Per una varietà di problemi tecnici sorti in varie fasi del progetto, conseguire questo obiettivo ha richiesto quattro dei sei mesi a disposizione, e le ultime criticità sono state individuate e risolte solo durante il secondo giorno di gara. È però con immensa soddisfazione che si sottolinea come, nonostante le altre numerose limitazioni strutturali e costruttive, da quel momento in poi il prototipo abbia volato in modo totalmente affidabile e preciso, senza necessità di alcun intervento umano.
 
 \newsection{Realizzazione}
 \indent
