@@ -616,7 +616,7 @@ La sua struttura è illustrata nel Listing \ref{lst:navnode}. L'organizzazione �
     \label{fig:navnode}
 \end{figure}
 
-\begin{lstlisting}[language=C++, caption={Definizione del nodo \emph{Navigator}.}, label={lst:navnode}]
+\begin{lstlisting}[language=C++, caption={Definizione del nodo \emph{navigator}.}, label={lst:navnode}]
 class Navigator : public rclcpp::Node
 {
 public:
@@ -667,6 +667,32 @@ private:
     bool reach_point(float target_x, float target_y, float target_z,
                      bool exploring, bool check_yaw, bool force_disc, float step,
                      const Navigation::Response::SharedPtr resp);
+};
+\end{lstlisting}
+
+\newsubsection{Path Finder}
+\indent Non appena un robot sconosciuto è stato rilevato e l'operatore alla GCS ha trasmesso la sequenza di atterraggi da compiere, nonché dopo ogni decollo relativo a tale sequenza, si rende necessario navigare dal punto in cui ci si trova fino alla posizione della piazzola successiva. Il calcolo del percorso migliore dalla posizione corrente a quella desiderata è effettuato dal nodo \emph{Path Finder}, la cui struttura è illustrata nel Listing \ref{lst:pathfnode}. Tale nodo offre semplicemente il servizio \emph{/PathFinder} al Navigator, tramite il quale viene richiesto e restituito il percorso ottimo punto per punto, nel caso esista. L'algoritmo impiegato per il calcolo è A*, applicato su un grafo ricostruito dal pointcloud di una mappa accurata del campo acquisita mediante lo stesso sistema di localizzazione del drone, ossia ORB\_SLAM2. Oggetto di questo lavoro è stata la realizzazione e integrazione di un nodo ROS 2 che offrisse tale servizio, mentre l'implementazione dell'algoritmo si deve al collega Alessandro Tenaglia, con un sentito ringraziamento personale. L'algoritmo tiene inoltre conto delle dimensioni del drone, con dei margini di sicurezza, assicurandosi di poterlo effettivamente spostare nei punti che trova. Un esempio d'esecuzione è mostrato in Figura \ref{fig:pathfpath}, che evidenzia gli ostacoli e i punti del percorso.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\textwidth]{figs/chapter3/pathfpath.jpg}
+    \caption{Risultato dell'algoritmo A* per il calcolo del percorso da piazzola 6 a 3.}
+    \label{fig:pathfpath}
+\end{figure}
+
+\vspace{0.5cm}
+\begin{lstlisting}[language=C++, caption={Definizione del nodo \emph{path\_finder}.}, label={lst:pathfnode}]
+class PathFinderNode : public rclcpp::Node
+{
+public:
+    PathFinderNode(char *config_file, char *space_file);
+
+private:
+    float xStart, yStart, zStart, xMargin, yMargin, zMargin, yaw;
+    CubeSpace *space;
+    rclcpp::Service<PathFinder>::SharedPtr path_finder_srv_;
+    void path_finder_clbk(PathFinder::Request::SharedPtr request,
+                          PathFinder::Response::SharedPtr response);
 };
 \end{lstlisting}
 
