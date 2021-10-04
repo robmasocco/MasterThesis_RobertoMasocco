@@ -599,5 +599,76 @@ private:
 \end{lstlisting}
 \clearpage
 
+\newsubsection{Navigator}
+\indent Salendo ora al livello più alto nella gerarchia dei moduli, in Figura \ref{fig:navnode} è rappresentata la struttura del nodo incaricato di gestire la navigazione: il Navigator. Supponendo che i sistemi di localizzazione e controllo volo funzionino correttamente, le operazioni che deve realizzare sono:
+\begin{itemize}
+    \item decollo da una qualunque piazzola;
+    \item esplorazione dell'ambiente alla ricerca del robot sconosciuto;
+    \item navigazione da un qualunque punto della mappa verso una specifica piazzola;
+    \item loop di ricerca attorno alla presunta posizione di una piazzola.
+\end{itemize}
+La sua struttura è illustrata nel Listing \ref{lst:navnode}. L'organizzazione è semplice, poiché si appoggia totalmente ai servizi offerti dagli altri package, offrendo un ulteriore livello di astrazione operativa alla logica di supervisione da cui è comandato tramite il servizio \emph{/Navigation}. L'odometria viene campionata dal topic \emph{/VehicleOdometry}, per fissare l'esatta posizione da cui decollare al fine di evitare drift in salita e per salvare la posizione della piazzola verso cui si sta andando durante la navigazione, se questa dovesse essere rilevata nel tragitto, anche grazie agli errori di posizionamento ricevuti dal topic \emph{/ArucoErrors}. Durante l'esplorazione è l'Aruco Scanner ad allertare il Navigator che un robot sconosciuto è stato individuato, tramite il topic \emph{/NavigatorAlerts}; in tal caso, il drone viene messo in hovering e viene formulata una richiesta al servizio della GCS per richiedere la sequenza di atterraggi all'operatore. Le operazioni di volo sono realizzate mediante i servizi \emph{/FlightControl} e \emph{/SetpointSetter} offerti dal Flight Control. I percorsi da seguire in ogni fase sono definiti per punti, ed ogni leg tra due punti intermedi viene ulteriormente discretizzata nella routine \emph{reach\_point}, la quale richiede poi di attendere il raggiungimento di ogni punto mediante l'apposito servizio del Flight Control. Per velocizzare l'andatura, il raggio di confidenza in cui si suppone che un setpoint sia stato raggiunto viene allargato e ristretto dinamicamente secondo necessità. I percorsi d'esplorazione sono predefiniti per ogni piazzola in base alla mappa, al fine di massimizzare la probabilità di trovare il robot sconosciuto, mentre quelli di navigazione vengono richiesti ad un altro nodo che si occupa di calcolarli.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.7\textwidth]{figs/chapter3/navigator.png}
+    \caption{Organizzazione del nodo \emph{navigator}.}
+    \label{fig:navnode}
+\end{figure}
+
+\begin{lstlisting}[language=C++, caption={Definizione del nodo \emph{Navigator}.}, label={lst:navnode}]
+class Navigator : public rclcpp::Node
+{
+public:
+    Navigator();
+
+private:
+    rclcpp::Subscription<VehicleOdometry>::SharedPtr odometry_sub_;
+    rclcpp::Subscription<Bool>::SharedPtr alert_sub_;
+    rclcpp::Subscription<ArucoDataVector>::SharedPtr pad_sub_;
+
+    rclcpp::Service<Navigation>::SharedPtr navigation_srv_;
+
+    rclcpp::CallbackGroup::SharedPtr odometry_clbk_group_;
+    rclcpp::CallbackGroup::SharedPtr alert_clbk_group_;
+    rclcpp::CallbackGroup::SharedPtr navigation_clbk_group_;
+
+    rclcpp::Client<FlightControl>::SharedPtr flight_control_client_;
+    rclcpp::Client<LandingSequence>::SharedPtr landing_sequence_client_;
+    rclcpp::Client<PathFinder>::SharedPtr path_finder_client_;
+    rclcpp::Client<SetpointSetter>::SharedPtr setp_client_;
+    rclcpp::Client<ArucoScanner>::SharedPtr scanner_client_;
+
+    rclcpp::Publisher<InternalError>::SharedPtr error_pub_;
+
+    std::mutex odom_lock_;
+    float drone_x_, drone_y_, drone_z_;
+
+    std::atomic<bool> stop_;
+
+    std::atomic<int> curr_pad_;
+    float last_pad_pos_[2];
+
+    void odometry_clbk(const VehicleOdometry::SharedPtr msg);
+    void alert_clbk(const Bool::SharedPtr msg);
+    void pad_clbk(const ArucoDataVector::SharedPtr msg);
+    void navigation_clbk(const Navigation::Request::SharedPtr request,
+                         const Navigation::Response::SharedPtr response);
+
+    void takeoff(const Navigation::Request::SharedPtr req,
+                 const Navigation::Response::SharedPtr resp);
+    void explore(const Navigation::Request::SharedPtr req,
+                 const Navigation::Response::SharedPtr resp);
+    void navigate(const Navigation::Request::SharedPtr req,
+                  const Navigation::Response::SharedPtr resp);
+    void search_pad(const Navigation::Request::SharedPtr req,
+                    const Navigation::Response::SharedPtr resp);
+
+    bool reach_point(float target_x, float target_y, float target_z,
+                     bool exploring, bool check_yaw, bool force_disc, float step,
+                     const Navigation::Response::SharedPtr resp);
+};
+\end{lstlisting}
+
 \newsection{Realizzazione}
 \indent
