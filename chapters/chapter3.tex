@@ -725,6 +725,70 @@ private:
 };
 \end{lstlisting}
 
+\newsubsection{Precision Landing}
+\indent Una volta raggiunta la presunta posizione di una piazzola, ed accertato tramite la camera inferiore e l'Aruco Scanner che essa è in vista, ci si deve atterrare. Questa operazione è a carico di un nodo, denominato \emph{precision\_lander} e facente parte del package \emph{Precision Landing}, la cui struttura è mostrata nel Listing \ref{lst:pland} e in Figura \ref{fig:pland}.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.7\textwidth]{figs/chapter3/pland.png}
+    \caption{Struttura del nodo \emph{precision\_lander}.}
+    \label{fig:pland}
+\end{figure}
+\vspace{0.5cm}
+\begin{lstlisting}[language=C++, caption={Definizione del nodo \emph{precision\_lander}.}, label={lst:pland}]
+class PrecisionLander : public rclcpp::Node
+{
+public:
+    PrecisionLander();
+
+private:
+    rclcpp::Publisher<afg_interfaces::msg::ChangeSetpoint>::SharedPtr vel_setp_pub_;
+    rclcpp::Client<FlightControl>::SharedPtr flight_control_client_;
+    rclcpp::Client<SetpointSetter>::SharedPtr setp_set_client_;
+
+    rclcpp::Subscription<ArucoDataVector>::SharedPtr aruco_data_sub_;
+    rclcpp::Subscription<VehicleOdometry>::SharedPtr vehicle_odometry_sub_;
+    rclcpp::Service<PrecLanding>::SharedPtr prec_landing_srv_;
+
+    rclcpp::CallbackGroup::SharedPtr aruco_data_clbk_group_;
+    rclcpp::CallbackGroup::SharedPtr odometry_clbk_group_;
+    rclcpp::CallbackGroup::SharedPtr prec_landing_clbk_group_;
+
+    double drone_x_, drone_y_, drone_z_;
+    double drone_vx_, drone_vy_, drone_vz_;
+    double drone_roll_, drone_pitch_, drone_yaw_;
+    std::mutex odometry_status_lock_;
+
+    std::atomic<int> landing_id_;
+
+    bool do_prec_landing_;
+    std::mutex prec_landing_lock_;
+    std::condition_variable prec_landing_cv_;
+
+    std::atomic<bool> timeo_expired_;
+    clock_t start_;
+    clock_t t_now_, t_prec_;
+    double t_passed_;
+
+    float x_err_int_, y_err_int_;
+    float x_err_der_, y_err_der_;
+    float x_err_old_, y_err_old_;
+    float z_ref_, z_init_;
+    float land_alt_;
+    float land_yaw_;
+    float last_x_, last_y_;
+
+    bool is_on_target(float x_err, float y_err);
+
+    void aruco_data_clbk(const ArucoDataVector::SharedPtr msg);
+    void odometry_states_clbk(const VehicleOdometry::SharedPtr msg);
+    void precision_landing_clbk(const PrecLanding::Request::SharedPtr request,
+                                const PrecLanding::Response::SharedPtr response);
+};
+\end{lstlisting}
+Come si evince dal listato, questo nodo è programmato in modo concorrente: vi è una callback che campiona l'odometria per capire come è posizionato ed orientato il drone totalmente in parallelo rispetto al resto, una callback dal servizio \emph{/PrecisionLanding} tramite cui può essere richiesta la procedura e una dal topic \emph{/ArucoErrors} da cui viene estratto l'errore di posizionamento rispetto alla piazzola. Quando giunge una richiesta per il servizio, il thread che la gestisce attiva il processamento dei dati nella callback da \emph{/ArucoErrors}, dove è implementato l'algoritmo di controllo. Tutte le operazioni di volo sono ancora una volta gestite mediante i servizi ed i topic offerti da Flight Control, ed il termine della procedura è soggetto a timeout e gestito mediante opportuni meccanismi di segnalazione tra thread basati su condition variables. Se tutto procede senza intoppi, la callback da \emph{/ArucoErrors} corregge progressivamente l'allineamento del drone facendolo scendere ed infine segnala all'altro thread, rimasto in attesa, che questo è pronto per la discesa finale. Sarà la callback del servizio, una volta riattivata, a richiedere l'esecuzione dell'atterraggio a Flight Control.\\
+L'algoritmo di controllo per correggere l'allineamento ed eseguire la discesa preliminare è stato sviluppato a più riprese: inizialmente si è testata in simulazione, con buoni risultati, una terna di PID\footnote{Il PID è una tipologia standard di controllori che si basano sulla composizione di un'azione di controllo finalizzata ad azzerare un segnale d'errore, e calcolata sulla base di esso, la sua derivata rispetto al tempo e la sua somma integrale entro un opportuno intervallo.} sui vari assi che controllasse il drone in velocità lineare inviando messaggi sul topic \emph{/ChangeSetpoint}. Tale soluzione si è rivelata però, a pochi giorni dalla competizione, inapplicabile per problemi di carico del sistema che inficiavano le prestazioni della camera: il rate di campionamento era infatti troppo basso e troppo variabile per consentire l'implementazione di un qualunque algoritmo di controllo veloce. Per queste ragioni e per il pochissimo tempo a disposizione è stato implementato un algoritmo più semplice denominato \emph{Land Corrector}: l'errore di posizionamento campionato dall'Aruco Scanner col drone livellato viene usato per calcolare un nuovo setpoint di posizione, che si raggiunge con stabilizzazione formulando una richiesta al servizio \emph{/SetpointSetter}; tale procedura viene ripetuta, diminuendo la quota se il drone è sufficientemente allineato e stabile, fino al raggiungimento di un'altitudine limite al di sotto della quale viene iniziata la discesa finale.
+
 \newsection{Realizzazione}
 console, checklist, affidabilità, atterraggi, risultato
 \indent
