@@ -536,7 +536,18 @@ private:
 \end{lstlisting}
 
 Facendo riferimento al Listing \ref{lst:imgrabber}, si nota come tutto abbia inizio entro il nodo \emph{image\_grabber}: esso si sottoscrive ai topic della camera \emph{vslam} su cui vengono pubblicate le immagini a infrarossi e la mappa di profondità. Per farlo, usa una funzionalità di ROS nota come \emph{message filter}: i due stream sono temporalmente sfasati tra loro, nonostante i due campioni pubblicati a poca distanza siano stati acquisiti nello stesso istante; il message filter applicato sui due topic bufferizza quello che arriva prima, ritardando la pubblicazione a quando anche l'altro è disponibile. Questa implementazione inoltre riduce a 1 la dimensione della coda di messaggi provenienti dalle camere, per evitare di processare campioni vecchi. Successivamente i campioni vengono processati per generare una posa locale attraverso una chiamata al metodo \emph{setPose} del nodo \emph{orbslam2\_node}. Al termine di queste operazioni, se la corrispondente feature è abilitata, viene postato un messaggio sul topic \emph{/CameraSampling}, del quale si può misurare il rate di pubblicazione al fine di stimare le performance del sistema ORB\_SLAM2 in tempo reale.\\
-Il nodo \emph{orbslam2\_node} è composto praticamente solo da un timer, alle cui occorrenze viene invocata una callback che legge l'ultima posa calcolata dal sistema e compone un messaggio da postare verso PX4 sul topic \emph{/VehicleVisualOdometry}. Nel far questo, la posa viene ruotata per compensare l'inclinazione della camera e trasformata dal sistema di riferimento di ORB\_SLAM2 a quello "mondo" di PX4, che è NED\footnote{North-East-Down, ossia X in avanti, Y verso destra e Z verso il basso.}. Viene inoltre applicata una traslazione delle coordinate basata sulla piazzola di partenza, in quanto ORB\_SLAM2 pone lo zero nel punto di accensione mentre il resto del software, come si vedrà, presuppone che l'origine delle coordinate sia in un punto fisso del campo. L'uso del timer è sostanzialmente un refuso delle precedenti versioni basate su localizzazione, dove era utile per decidere quando far intervenire gli estrapolatori, mentre ora consente soltanto di fissare il rate di pubblicazione. Il messaggio postato verso PX4 consta essenzialmente di coordinate NED X, Y, Z, un quaternione d'orientamento ed un timestamp. Opzionalmente, alle tre coordinate spaziali può essere applicato il filtro numerico menzionato precedentemente, il cui funzionamento può essere riassunto così: TODO.
+Il nodo \emph{orbslam2\_node} è composto praticamente solo da un timer, alle cui occorrenze viene invocata una callback che legge l'ultima posa calcolata dal sistema e compone un messaggio da postare verso PX4 sul topic \emph{/VehicleVisualOdometry}. Nel far questo, la posa viene ruotata per compensare l'inclinazione della camera e trasformata dal sistema di riferimento di ORB\_SLAM2 a quello "mondo" di PX4, che è NED\footnote{North-East-Down, ossia X in avanti, Y verso destra e Z verso il basso.}. Viene inoltre applicata una traslazione delle coordinate basata sulla piazzola di partenza, in quanto ORB\_SLAM2 pone lo zero nel punto di accensione mentre il resto del software, come si vedrà, presuppone che l'origine delle coordinate sia in un punto fisso del campo. L'uso del timer è sostanzialmente un refuso delle precedenti versioni basate su localizzazione, dove era utile per decidere quando far intervenire gli estrapolatori, mentre ora consente soltanto di fissare il rate di pubblicazione. Il messaggio postato verso PX4 consta essenzialmente di coordinate NED X, Y, Z, un quaternione d'orientamento ed un timestamp. Opzionalmente, alle tre coordinate spaziali può essere applicato il filtro numerico menzionato precedentemente, il cui funzionamento può essere riassunto così:
+\begin{subequations}
+\begin{align}
+    \xi^+ &= \tau\xi + (1 - \tau)y\\
+    \tau^+ &=
+    \begin{cases}
+        \max(\tau_{\min}, \tau - \frac{1}{120}) &, \text{if  $T_r<\sigma_T$}\\
+        \tau_{\max} &, \text{otherwise}
+    \end{cases}
+\end{align}
+\end{subequations}
+dove $y$ è l'ultimo campione acquisito dal sistema di localizzazione sullo specifico asse, $\xi$ è il corrispondente campione generato dal filtro, e $\tau$ è un coefficiente calcolato sempre per ogni asse sulla base di un buffer circolare di campioni. L'idea è che tale buffer riassuma la storia recente del sistema e consenta di individuare campioni spuri, che verranno filtrati di più o di meno a seconda del valore di $\tau$, a sua volta aggiornato sulla base di $T_r$ che è calcolato controllando la differenza tra i campioni nel buffer. Tutti i parametri e le saturazioni $\tau_{\min}$, $\tau_{\max}$ e $\sigma_T$ sono stati tarati sulla base di dati raccolti durante i voli. L'effetto di questa soluzione è ridurre l'impatto degli outliers prodotti da ORB\_SLAM2 sul comportamento del drone, ritardandone leggermente gli effetti e dando il tempo al sistema di produrre nuovi campioni più corretti evitando contemporaneamente che il drone corregga falsi spostamenti.
 
 \newsubsection{Aruco Scanner}
 \indent Le immagini RGB provenienti dalla camera inferiore sono necessarie per individuare i robot sconosciuti, acquisire la sequenza dei punteggi e localizzare le piazzole di atterraggio. Il processamento di queste immagini è affidato al nodo \emph{aruco\_scanner}, la cui struttura è descritta nel Listing \ref{lst:ascan} e illustrata in Figura \ref{fig:ascan}. Il suo eseguibile va avviato fornendo gli ID dei robot conosciuti e la distanza focale, in pixel, della camera. Tutto il lavoro compiuto da questo nodo è codificato nella callback \emph{down\_camera\_clbk}, che acquisisce con un'apposita policy di QoS l'ultima immagine scattata e la elabora al fine di trovare eventuali landmark ArUco presenti in essa. Per questo task è stata impiegata la libreria OpenCV, compilata per architettura CUDA in modo da far uso anche in questo contesto della GPU. Se nell'immagine è presente un landmark, la callback ha due modalità di funzionamento:
@@ -696,5 +707,24 @@ private:
 };
 \end{lstlisting}
 
+\newsubsection{Ground Control Station}
+\indent In esecuzione sul PC adibito a Ground Control Station è stato posto un nodo, denominato appunto \emph{GCS}, che consentisse all'operatore di inserire la sequenza degli atterraggi da eseguire dopo aver individuato il robot sconosciuto. La struttura di questo nodo è illustrata nel Listing \ref{lst:gcs} ed è estremamente semplice, in quanto si riduce ad un server per il servizio \emph{/LandingSequence} la cui callback offre all'operatore un'interfaccia a riga di comando per inserire la sequenza. È stata anche tentata la trasmissione, mediante un opportuno topic, delle foto dei robot sconosciuti tramite questo nodo, ma la procedura è stata rimossa in quanto come si è puntualizzato nel capitolo precedente la trasmissione di messaggi di grandi dimensioni come le immagini è al momento problematica per i DDS su reti soggette a perdita, come WiFi. Pertanto, tale funzionalità è stata rimpiazzata da uno script di shell che trasferisce via \emph{scp} tutte le nuove foto scattate.
+\vspace{1cm}
+\begin{lstlisting}[language=C++, caption={Definizione del nodo \emph{gcs}.}, label={lst:gcs}]
+class GCSNode : public rclcpp::Node
+{
+public:
+    GCSNode();
+
+private:
+    rclcpp::Service<LandingSequence>::SharedPtr landing_seq_srv_;
+    rclcpp::CallbackGroup::SharedPtr land_seq_clbk_group_;
+
+    void landing_seq_callback(const LandingSequence::Request::SharedPtr request,
+                              const LandingSequence::Response::SharedPtr response);
+};
+\end{lstlisting}
+
 \newsection{Realizzazione}
+console, checklist, affidabilità, atterraggi, risultato
 \indent
