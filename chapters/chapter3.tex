@@ -730,7 +730,7 @@ private:
 
 \begin{figure}
     \centering
-    \includegraphics[width=0.7\textwidth]{figs/chapter3/pland.png}
+    \includegraphics[width=0.8\textwidth]{figs/chapter3/pland.png}
     \caption{Struttura del nodo \emph{precision\_lander}.}
     \label{fig:pland}
 \end{figure}
@@ -796,15 +796,71 @@ L'algoritmo di controllo per correggere l'allineamento ed eseguire la discesa pr
     \item eventi come strutture a cui aggiungere eventualmente dei dati da far processare ai metodi degli stati durante le transizioni;
     \item transizioni e macchine intere istanziando classi template, il cui codice però assomigliava ad una vera e propria tabella.
 \end{itemize}
-La descrizione della macchina e dei suoi stati ricalca di fatto la dinamica di una missione così come stabilito dal regolamento, e difatti una sua rappresentazione grafica è sufficiente a riassumerne le caratteristiche TODO. L'intera missione è stata dunque codificata, a seguito dei vari livelli di astrazione illustrati, in un'unica routine nella quale vengono invocate le varie transizioni tra gli stati a seconda delle condizioni in cui si trova il drone. La gestione delle condizioni d'errore è stata gestita mediante il concetto di \emph{meta-macchina} di MSM: le parti pregnanti di una missione avvengono in degli stati che costituiscono una FSM a sé stante, ma dalla quale si può sempre uscire verso gli stati di terminazione. Dopo una serie di prove, si è riscontrato che è molto rischioso richiedere un atterraggio d'emergenza automatico al controllore di volo quando qualcosa non va, soprattutto quando il sistema di localizzazione ha smesso di funzionare; per tale ragione si è deciso che in caso di problemi la FSM dovesse interrompere immediatamente l'esecuzione senza richiedere nessun'altra operazione, permettendo così al pilota di inserire il controllo manuale il più presto possibile.\\
+La descrizione della macchina e dei suoi stati ricalca di fatto la dinamica di una missione così come stabilito dal regolamento. L'intera missione è stata dunque codificata, a seguito dei vari livelli di astrazione illustrati, in un'unica routine nella quale vengono invocate le varie transizioni tra gli stati a seconda delle condizioni in cui si trova il drone. La gestione delle condizioni d'errore è stata gestita mediante il concetto di \emph{meta-macchina} di MSM: le parti pregnanti di una missione avvengono in degli stati che costituiscono una FSM a sé stante, ma dalla quale si può sempre uscire verso gli stati di terminazione. Dopo una serie di prove, si è riscontrato che è molto rischioso richiedere un atterraggio d'emergenza automatico al controllore di volo quando qualcosa non va, soprattutto quando il sistema di localizzazione ha smesso di funzionare; per tale ragione si è deciso che in caso di problemi la FSM dovesse interrompere immediatamente l'esecuzione senza richiedere nessun'altra operazione, permettendo così al pilota di inserire il controllo manuale il più presto possibile. Una rappresentazione grafica delle due macchine di alto e basso livello è offerta nelle Figure \ref{fig:highfsm} e \ref{fig:metafsm}.\\
 Per interagire con gli altri moduli attraverso il middleware, è stato aggiunto al package un nodo denominato \emph{fsm}, la cui struttura è illustrata nel Listing \ref{lst:fsmnode} e in Figura \ref{fig:fsmnode}.
+\newpage
 
 \begin{figure}
     \centering
-    \includegraphics[width=0.7\textwidth]{figs/chapter3/fsm.png}
+    \includegraphics[width=0.5\textwidth]{figs/chapter3/fsm.png}
     \caption{Struttura del nodo \emph{fsm}.}
     \label{fig:fsmnode}
 \end{figure}
+
+\begin{figure}
+    \centering
+    \begin{tikzpicture}[->,
+                        >=latex,
+                        shorten >=1pt,
+                        auto,
+                        node distance=6cm,
+                        semithick]
+        \node[state] (SETUP)                        {SETUP};
+        \node[state] (RUNNING)   [right of=SETUP]   {RUNNING};
+        \node[state] (TERMINATE) [right of=RUNNING] {TERMINATE};
+        \path[]
+            (SETUP)   edge                      node [above] {start mission}     (RUNNING)
+            (RUNNING) edge [bend left=50]       node [above] {mission completed} (TERMINATE)
+                      edge [bend left=25]       node [above] {takeoff fail}      (TERMINATE)
+                      edge [bend right=25]      node [below] {land fail}         (TERMINATE)
+                      edge [bend right=50]      node [below] {abort mission}     (TERMINATE);
+    \end{tikzpicture}
+    \caption{Diagramma di stato della FSM di alto livello.}
+    \label{fig:highfsm}
+\end{figure}
+\clearpage
+
+\begin{figure}
+    \centering
+    \begin{tikzpicture}[->,
+                        >=latex,
+                        shorten >=1pt,
+                        auto,
+                        node distance=6cm,
+                        semithick]
+        \node[state, align=center] (FT)                        {FIRST\\TAKEOFF};
+        \node[state, align=center] (NAV)  [right of=FT]        {NAVIGATING};
+        \node[state, align=center] (EXPL) [right of=NAV]       {EXPLORING};
+        \node[state, align=center] (PL)   [below of=NAV]       {PRECISION\\LANDING};
+        \node[state, align=center] (LND)  [below right of=PL]  {LANDED};
+        \node[state, align=center] (SP)   [below left of=PL]   {SEARCH\\PAD};
+        \node[state, align=center] (TK)   [below of=EXPL]      {TAKEOFF};
+        \path[]
+            (FT)   edge [bend left=50]       node [above]     {start exploration}     (EXPL)
+            (EXPL) edge [bend right=20]      node [above]     {sequence from gcs}     (NAV)
+            (NAV)  edge [bend right=20]      node [left]      {pad reached}           (PL)
+            (PL)   edge [bend right=20]      node [right=0.1] {change pad}            (NAV)
+                   edge [bend right=20]      node [left=0.1]  {pad lost}              (SP)
+                   edge [bend left=20]       node [right=0.1] {landing ok}            (LND)
+            (LND)  edge [bend right=20]      node [right]     {new pad}               (TK)
+            (SP)   edge [bend right=20]      node [below=0.6] {pad reached}           (PL)
+                   edge [bend left=45]       node [left]      {change pad}            (NAV)
+            (TK)   edge [bend right=25]      node [right=0.1] {takeoff ok}            (NAV);
+    \end{tikzpicture}
+    \caption{Diagramma di stato della meta-FSM contenuta nello stato \emph{RUNNING}.}
+    \label{fig:metafsm}
+\end{figure}
+\clearpage
 
 \begin{lstlisting}[language=C++, caption={Definizione del nodo \emph{fsm}.}, label={lst:fsmnode}]
 class FSMNode : public rclcpp::Node
@@ -830,5 +886,4 @@ private:
 Il nodo è in questo package semplicemente un punto d'accesso verso il middleware, che racchiude clients verso tutti i servizi finora descritti e subscribers ai topic \emph{ORBS2State} per controllare lo stato del sistema di localizzazione ORB\_SLAM2 ed \emph{/InternalErrors} per ricevere segnalazioni d'errore prodotte dagli altri moduli dell'architettura.
 
 \newsection{Realizzazione}
-Sono stati realizzati due prototipi strutturali del drone, ottimizzando la costruzione nel passaggio dal primo al secondo, rispettivamente nei mesi di Maggio e Giugno 2021; non essendo il primo di alcun aiuto ai fini della presente trattazione, esso è stato tralasciato. I diversi moduli di quest'architettura sono stati sviluppati singolarmente e testati prima in simulazione su Gazebo, poi sul prototipo reale nei locali della Facoltà d'Ingegneria dell'Università di Roma "Tor Vergata" e nel corso di due ricognizioni del campo gara presso la Divisione Velivoli di Leonardo S.p.A. a Torino, Italia, rispettivamente nei mesi di Giugno e Settembre 2021. L'operatore alla GCS entra in comunicazione con il sistema montato sul drone mediante 10 terminali SSH\footnote{In informatica e telecomunicazioni SSH (Secure SHell) è un protocollo che permette di stabilire una sessione remota cifrata tramite interfaccia a riga di comando con un altro host di una rete informatica. È il protocollo che ha sostituito l'analogo, ma insicuro, Telnet.} attivati grazie al terminal emulator \emph{Terminator}. Da ciascuno di essi è possibile attivare uno dei moduli sin qui illustrati, secondo un ordinamento definito in una checklist. Una volta stabilite le modalità di volo e corretti gli ultimi problemi, il prototipo è stato portato in gara. Le prime due delle quattro manches sono state totalmente infruttuose, a causa di un cambiamento dell'ultimo minuto apportato da Leonardo alla costruzione del campo gara e di problemi di carico che si riflettevano sulla stabilità del sistema di localizzazione, questi ultimi peraltro presenti fin dall'inizio ma mai individuati con sicurezza fino a quel punto. Una volta isolate e risolte le cause, nelle ultime due manches tutti i sistemi hanno funzionato alla perfezione, ed il prototipo ha volato con precisione portando a termine entrambe le missioni per esaurimento della batteria, totalizzando sempre ottimi punteggi. La giuria ha apprezzato questo comportamento, nonché la completa assenza di problemi dal momento in cui il drone decollava fino al termine della gara. Gli atterraggi, eseguiti grazie al \emph{Land Detector}, sono stati giudicati da giuria e pubblico i migliori tra quelli effettuati da tutti i team, per la loro precisione e semplicità d'esecuzione. Il team dell'Università di Roma "Tor Vergata", la cui composizione è stata più volte citata all'inizio di questo lavoro, si è aggiudicato pertanto il secondo posto superando quello del Politecnico di Torino e venendo preceduto per un solo atterraggio da quello del Politecnico di Milano.
-\indent
+\indent Sono stati realizzati due prototipi strutturali del drone, ottimizzando la costruzione nel passaggio dal primo al secondo, rispettivamente nei mesi di Maggio e Giugno 2021; non essendo il primo di alcun aiuto ai fini della presente trattazione, esso è stato tralasciato. I diversi moduli di quest'architettura sono stati sviluppati singolarmente e testati prima in simulazione su Gazebo, poi sul prototipo reale nei locali della Facoltà d'Ingegneria dell'Università di Roma "Tor Vergata" e nel corso di due ricognizioni del campo gara presso la Divisione Velivoli di Leonardo S.p.A. a Torino, Italia, rispettivamente nei mesi di Giugno e Settembre 2021. L'operatore alla GCS entra in comunicazione con il sistema montato sul drone mediante 10 terminali SSH\footnote{In informatica e telecomunicazioni SSH (Secure SHell) è un protocollo che permette di stabilire una sessione remota cifrata tramite interfaccia a riga di comando con un altro host di una rete informatica.} attivati grazie al terminal emulator \emph{Terminator}. Da ciascuno di essi è possibile attivare uno dei moduli sin qui illustrati, secondo un ordinamento definito in una checklist. Una volta stabilite le modalità di volo e corretti gli ultimi problemi, il prototipo è stato portato in gara. Le prime due delle quattro manches sono state totalmente infruttuose, a causa di un cambiamento dell'ultimo minuto apportato da Leonardo alla costruzione del campo gara e di problemi di carico che si riflettevano sulla stabilità del sistema di localizzazione, questi ultimi peraltro presenti fin dall'inizio ma mai individuati con sicurezza fino a quel punto. Una volta isolate e risolte le cause, nelle ultime due manches tutti i sistemi hanno funzionato alla perfezione, ed il prototipo ha volato con precisione portando a termine entrambe le missioni per esaurimento della batteria, totalizzando sempre ottimi punteggi. La giuria ha apprezzato questo comportamento, nonché la completa assenza di problemi dal momento in cui il drone decollava fino al termine della gara. Gli atterraggi, eseguiti grazie al \emph{Land Detector}, sono stati giudicati da giuria e pubblico i migliori tra quelli effettuati da tutti i team, per la loro precisione e semplicità d'esecuzione. Il team dell'Università di Roma "Tor Vergata", la cui composizione è stata più volte citata all'inizio di questo lavoro, si è aggiudicato pertanto il secondo posto superando quello del Politecnico di Torino e venendo preceduto per un solo atterraggio da quello del Politecnico di Milano.

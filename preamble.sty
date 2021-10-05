@@ -113,12 +113,19 @@
 % | TIKZ SETTINGS |
 % +---------------+
 \usepackage{tikz}
-\usetikzlibrary{arrows,fit,positioning,shapes}
+\usetikzlibrary{
+                arrows,
+                arrows.meta,
+                fit,
+                positioning,
+                shapes,
+                automata
+}
 \tikzstyle{block} = [draw, rectangle, minimum height=3em, minimum width=4em]
 \tikzstyle{sum} = [draw, circle, node distance=0.8cm]
 \tikzstyle{input} = [coordinate]
 \tikzstyle{output} = [coordinate]
-\tikzstyle{pinstyle} = [pin edge={to-,thin,black}]
+\tikzstyle{pinstyle} = [pin edge={to-, thin, black}]
 
 % +---------------------+
 % |   CUSTOM COMMANDS   |
