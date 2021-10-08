@@ -538,14 +538,14 @@ private:
 Facendo riferimento al Listing \ref{lst:imgrabber}, si nota come tutto abbia inizio entro il nodo \emph{image\_grabber}: esso si sottoscrive ai topic della camera \emph{vslam} su cui vengono pubblicate le immagini a infrarossi e la mappa di profondità. Per farlo, usa una funzionalità di ROS nota come \emph{message filter}: i due stream sono temporalmente sfasati tra loro, nonostante i due campioni pubblicati a poca distanza siano stati acquisiti nello stesso istante; il message filter applicato sui due topic bufferizza quello che arriva prima, ritardando la pubblicazione a quando anche l'altro è disponibile. Questa implementazione inoltre riduce a 1 la dimensione della coda di messaggi provenienti dalle camere, per evitare di processare campioni vecchi. Successivamente i campioni vengono processati per generare una posa locale attraverso una chiamata al metodo \emph{setPose} del nodo \emph{orbslam2\_node}. Al termine di queste operazioni, se la corrispondente feature è abilitata, viene postato un messaggio sul topic \emph{/CameraSampling}, del quale si può misurare il rate di pubblicazione al fine di stimare le performance del sistema ORB\_SLAM2 in tempo reale.\\
 Il nodo \emph{orbslam2\_node} è composto praticamente solo da un timer, alle cui occorrenze viene invocata una callback che legge l'ultima posa calcolata dal sistema e compone un messaggio da postare verso PX4 sul topic \emph{/VehicleVisualOdometry}. Nel far questo, la posa viene ruotata per compensare l'inclinazione della camera e trasformata dal sistema di riferimento di ORB\_SLAM2 a quello "mondo" di PX4, che è NED\footnote{North-East-Down, ossia X in avanti, Y verso destra e Z verso il basso.}. Viene inoltre applicata una traslazione delle coordinate basata sulla piazzola di partenza, in quanto ORB\_SLAM2 pone lo zero nel punto di accensione mentre il resto del software, come si vedrà, presuppone che l'origine delle coordinate sia in un punto fisso del campo. L'uso del timer è sostanzialmente un refuso delle precedenti versioni basate su localizzazione, dove era utile per decidere quando far intervenire gli estrapolatori, mentre ora consente soltanto di fissare il rate di pubblicazione. Il messaggio postato verso PX4 consta essenzialmente di coordinate NED X, Y, Z, un quaternione d'orientamento ed un timestamp. Opzionalmente, alle tre coordinate spaziali può essere applicato il filtro numerico menzionato precedentemente, il cui funzionamento può essere riassunto così:
 \begin{subequations}
-\begin{align}
-    \xi^+ &= \tau\xi + (1 - \tau)y\\
-    \tau^+ &=
-    \begin{cases}
-        \max(\tau_{\min}, \tau - \frac{1}{120}) &, \text{if  $T_r<\sigma_T$}\\
-        \tau_{\max} &, \text{otherwise}
-    \end{cases}
-\end{align}
+    \begin{align}
+        \xi^+ &= \tau\xi + (1 - \tau)y\\
+        \tau^+ &=
+        \begin{cases}
+            \max(\tau_{\min}, \tau - \frac{1}{120}) &, \text{ if  $T_r<\sigma_T$}\\
+            \tau_{\max} &, \text{ otherwise}
+        \end{cases}
+    \end{align}
 \end{subequations}
 dove $y$ è l'ultimo campione acquisito dal sistema di localizzazione sullo specifico asse, $\xi$ è il corrispondente campione generato dal filtro, e $\tau$ è un coefficiente calcolato sempre per ogni asse sulla base di un buffer circolare di campioni. L'idea è che tale buffer riassuma la storia recente del sistema e consenta di individuare campioni spuri, che verranno filtrati di più o di meno a seconda del valore di $\tau$, a sua volta aggiornato sulla base di $T_r$ che è calcolato controllando la differenza tra i campioni nel buffer. Tutti i parametri e le saturazioni $\tau_{\min}$, $\tau_{\max}$ e $\sigma_T$ sono stati tarati sulla base di dati raccolti durante i voli. L'effetto di questa soluzione è ridurre l'impatto degli outliers prodotti da ORB\_SLAM2 sul comportamento del drone, ritardandone leggermente gli effetti e dando il tempo al sistema di produrre nuovi campioni più corretti evitando contemporaneamente che il drone corregga falsi spostamenti.
 
