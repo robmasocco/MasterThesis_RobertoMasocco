@@ -18,10 +18,11 @@ La fase di raccolta dati è stata eseguita su Gazebo, impiegando il modulo Fligh
 La procedura d'identificazione è stata eseguita con l'ausilio della System Identification Toolbox\footnote{https://it.mathworks.com/products/sysid.html} di MATLAB. Il Toolbox è stato impiegato in entrambi i casi per identificare la rappresentazione nello spazio di stato di un sistema lineare del primo ordine usando la \emph{Prediction Error Minimization}, da cui calcolare poi una funzione di trasferimento. I dataset sono stati divisi in due parti, usate rispettivamente per la stima e la validazione. Un confronto tra i modelli approssimati e quelli reali eseguito sui validation sets, unitamente agli intervalli di confidenza, è disponibile nelle Figure \ref{fig:xvalerr} e \ref{fig:yvalerr}, mentre le due funzioni di trasferimento ad essi corrispondenti sono:
 \begin{subequations}
     \begin{align}
-        W_x(s) &= \frac{1.1853}{s+1.2775}\\
-        W_y(s) &= \frac{1.4219}{s+1.4350}.
+        W_x(s) &= \frac{1}{s+1.2775}\\
+        W_y(s) &= \frac{1}{s+1.4350}
     \end{align}
 \end{subequations}
+i cui guadagni statici sono stati approssimati pari ad 1 in quanto il controllore di volo insegue i riferimenti di velocità in modo da annullare l'errore a regime.
 
 \begin{figure}
     \centering
